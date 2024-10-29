@@ -27,7 +27,7 @@ ujson
 Pillow
 ######## For Chatocrv3 #######
 qianfan==0.0.3
-langchain==0.1.5
+langchain==0.3.0
 langchain-community==0.0.17
 erniebot == 0.5.0
 erniebot-agent == 0.5.0
