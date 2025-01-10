@@ -45,7 +45,7 @@ def collect_trt_shape_range_info(
     min_arrs, opt_arrs, max_arrs = {}, {}, {}
     for name, candidate_shapes in dynamic_shapes.items():
         min_shape, opt_shape, max_shape = candidate_shapes
-        # HACK: Currently the data type is hard-coded
+        # XXX: Currently the data type is hard-coded.
         if name in dynamic_shape_input_data:
             min_arrs[name] = np.array(
                 dynamic_shape_input_data[name][0], dtype=np.float32
@@ -61,13 +61,18 @@ def collect_trt_shape_range_info(
             opt_arrs[name] = np.ones(opt_shape, dtype=np.float32)
             max_arrs[name] = np.ones(max_shape, dtype=np.float32)
 
-    # opt_arrs would be used twice to simulate the most common situations
+    # `opt_arrs` is used twice to ensure it is the most frequently used.
     for arrs in [min_arrs, opt_arrs, opt_arrs, max_arrs]:
         for name, arr in arrs.items():
             handle = predictor.get_input_handle(name)
             handle.reshape(arr.shape)
             handle.copy_from_cpu(arr)
         predictor.run()
+    # HACK: The shape range info will be written to the file only when
+    # `predictor` is garbage collected. It works in CPython, but it is
+    # definitely a bad idea to count on the implementation-dependent behavior of
+    # a garbage collector. Is there a more explicit and deterministic way to
+    # handle this?
 
 
 class Copy2GPU:
