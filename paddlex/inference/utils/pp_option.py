@@ -75,10 +75,11 @@ class PaddlePredictorOption(object):
             "trt_max_workspace_size": 1 << 30,  # only for trt
             "trt_max_batch_size": 32,  # only for trt
             "trt_min_subgraph_size": 3,  # only for trt
-            "trt_use_static": False,  # only for trt
+            "trt_use_static": True,  # only for trt
             "trt_use_calib_mode": False,  # only for trt
             "trt_use_dynamic_shapes": True,  # only for trt
-            "trt_collect_shapes": False,  # only for trt
+            "trt_collect_shape_range_info": True,  # only for trt
+            "trt_discard_cached_shape_range_info": False,  # only for trt
             "trt_dynamic_shapes": None,  # only for trt
             "trt_dynamic_shape_input_data": None,  # only for trt
             "trt_shape_range_info_path": None,  # only for trt
@@ -219,12 +220,22 @@ class PaddlePredictorOption(object):
         self._update("trt_use_dynamic_shapes", trt_use_dynamic_shapes)
 
     @property
-    def trt_collect_shapes(self):
-        return self._cfg["trt_collect_shapes"]
+    def trt_collect_shape_range_info(self):
+        return self._cfg["trt_collect_shape_range_info"]
 
-    @trt_collect_shapes.setter
-    def trt_collect_shapes(self, trt_collect_shapes):
-        self._update("trt_collect_shapes", trt_collect_shapes)
+    @trt_collect_shape_range_info.setter
+    def trt_collect_shape_range_info(self, trt_collect_shape_range_info):
+        self._update("trt_collect_shape_range_info", trt_collect_shape_range_info)
+
+    @property
+    def trt_discard_cached_shape_range_info(self):
+        return self._cfg["trt_discard_cached_shape_range_info"]
+
+    @trt_discard_cached_shape_range_info.setter
+    def trt_discard_cached_shape_range_info(self, trt_discard_cached_shape_range_info):
+        self._update(
+            "trt_discard_cached_shape_range_info", trt_discard_cached_shape_range_info
+        )
 
     @property
     def trt_dynamic_shapes(self):

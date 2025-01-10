@@ -16,6 +16,7 @@ from typing import Union, Tuple, List, Any
 import os
 import lazy_paddle as paddle
 import numpy as np
+from pathlib import Path
 
 from ....utils.flags import FLAGS_json_format_model
 from ....utils import logging
@@ -25,7 +26,7 @@ from ...utils.pp_option import PaddlePredictorOption
 CACHE_DIR = ".cache"
 
 
-def collect_trt_shapes(
+def collect_trt_shape_range_info(
     model_file,
     model_params,
     gpu_id,
@@ -38,22 +39,23 @@ def collect_trt_shapes(
     config = paddle.inference.Config(model_file, model_params)
     config.enable_use_gpu(100, gpu_id)
     config.collect_shape_range_info(shape_range_info_path)
+    config.disable_glog_info()
     predictor = paddle.inference.create_predictor(config)
 
     min_arrs, opt_arrs, max_arrs = {}, {}, {}
     for name, candidate_shapes in dynamic_shapes.items():
         min_shape, opt_shape, max_shape = candidate_shapes
-        # HACK: Currently the data type is hard-coded.
+        # HACK: Currently the data type is hard-coded
         if name in dynamic_shape_input_data:
             min_arrs[name] = np.array(
                 dynamic_shape_input_data[name][0], dtype=np.float32
-            )
+            ).reshape(min_shape)
             opt_arrs[name] = np.array(
                 dynamic_shape_input_data[name][1], dtype=np.float32
-            )
+            ).reshape(opt_shape)
             max_arrs[name] = np.array(
                 dynamic_shape_input_data[name][2], dtype=np.float32
-            )
+            ).reshape(max_shape)
         else:
             min_arrs[name] = np.ones(min_shape, dtype=np.float32)
             opt_arrs[name] = np.ones(opt_shape, dtype=np.float32)
@@ -62,9 +64,9 @@ def collect_trt_shapes(
     # opt_arrs would be used twice to simulate the most common situations
     for arrs in [min_arrs, opt_arrs, opt_arrs, max_arrs]:
         for name, arr in arrs.items():
-            input_handler = predictor.get_input_handle(name)
-            input_handler.reshape(arr.shape)
-            input_handler.copy_from_cpu(arr)
+            handle = predictor.get_input_handle(name)
+            handle.reshape(arr.shape)
+            handle.copy_from_cpu(arr)
         predictor.run()
 
 
@@ -179,9 +181,9 @@ class StaticInfer:
                     "trt_fp16": Config.Precision.Half,
                 }
                 if self.option.run_mode in precision_map.keys():
-                    if self.option.trt_use_static:
-                        config.set_optim_cache_dir(str(self.model, CACHE_DIR))
+                    config.set_optim_cache_dir(str(self.model_dir / CACHE_DIR))
 
+                    # TODO: Use a separate function
                     config.enable_tensorrt_engine(
                         workspace_size=self.option.trt_max_workspace_size,
                         max_batch_size=self.option.trt_max_batch_size,
@@ -192,31 +194,51 @@ class StaticInfer:
                     )
 
                     if self.option.trt_use_dynamic_shapes:
-                        if self.option.trt_collect_shapes:
-                            if not os.path.exists(
-                                self.option.trt_shape_range_info_path
-                            ):
-                                logging.info(
-                                    f"Dynamic shape info is collected into: {self.option.trt_shape_range_info_path}"
+                        if self.option.trt_collect_shape_range_info:
+                            # NOTE: We always use a shape range info file.
+                            if self.option.trt_shape_range_info_path is not None:
+                                trt_shape_range_info_path = Path(
+                                    self.option.trt_shape_range_info_path
                                 )
-                                collect_trt_shapes(
-                                    model_file,
-                                    params_file,
-                                    self.option.device_id,
-                                    self.option.trt_shape_range_info_path,
-                                    self.option.trt_dynamic_shapes,
-                                    self.option.trt_dyanmic_shape_input_data,
+                            else:
+                                trt_shape_range_info_path = (
+                                    self.model_dir
+                                    / CACHE_DIR
+                                    / "shape_range_info.pbtxt"
+                                )
+                            should_collect_shape_range_info = True
+                            if not trt_shape_range_info_path.exists():
+                                trt_shape_range_info_path.parent.mkdir(
+                                    parents=True, exist_ok=True
+                                )
+                                logging.info(
+                                    f"Shape range info will be collected into {trt_shape_range_info_path}"
+                                )
+                            elif self.option.trt_discard_cached_shape_range_info:
+                                trt_shape_range_info_path.unlink()
+                                logging.info(
+                                    f"The shape range info file ({trt_shape_range_info_path}) has been removed, and the shape range info will be re-collected."
                                 )
                             else:
                                 logging.info(
-                                    f"A dynamic shape info file ( {self.option.trt_shape_range_info_path} ) already exists. No need to collect again."
+                                    f"A shape range info file ({trt_shape_range_info_path}) already exists. There is no need to collect the info again."
+                                )
+                                should_collect_shape_range_info = False
+                            if should_collect_shape_range_info:
+                                collect_trt_shape_range_info(
+                                    model_file,
+                                    params_file,
+                                    self.option.device_id,
+                                    str(trt_shape_range_info_path),
+                                    self.option.trt_dynamic_shapes,
+                                    self.option.trt_dynamic_shape_input_data,
                                 )
                             config.enable_tuned_tensorrt_dynamic_shape(
-                                self.option.trt_shape_range_info_path,
+                                str(trt_shape_range_info_path),
                                 self.option.trt_allow_build_at_runtime,
                             )
                         else:
-                            if self.option.trt_dynamic_shapes:
+                            if self.option.trt_dynamic_shapes is not None:
                                 min_shapes, opt_shapes, max_shapes = {}, {}, {}
                                 for (
                                     key,
@@ -228,6 +250,10 @@ class StaticInfer:
                                     config.set_trt_dynamic_shape_info(
                                         min_shapes, max_shapes, opt_shapes
                                     )
+                            else:
+                                raise RuntimeError(
+                                    "No dynamic shape information provided"
+                                )
 
         elif self.option.device == "npu":
             config.enable_custom_device("npu")

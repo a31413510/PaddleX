@@ -60,9 +60,7 @@ class BasicPredictor(
         config: Optional[Dict[str, Any]] = None,
         *,
         device: Optional[str] = None,
-        use_paddle: bool = True,
         pp_option: Optional[PaddlePredictorOption] = None,
-        multibackend_config: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initializes the BasicPredictor.
 
@@ -70,32 +68,10 @@ class BasicPredictor(
             model_dir (str): The directory where the model files are stored.
             config (Dict[str, Any], optional): The model configuration dictionary. Defaults to None.
             device (str, optional): The device to run the inference engine on. Defaults to None.
-            use_paddle (bool, optional): Whether to use Paddle Inference. Defaults to True.
             pp_option (PaddlePredictorOption, optional): The inference engine options. Defaults to None.
-            multibackend_config (Optional[Dict[str, Any]], optional): The multi-backend inference configuration dictionary. Defaults to None.
         """
         super().__init__(model_dir=model_dir, config=config)
-        self.use_paddle = use_paddle
-        if use_paddle:
-            if not pp_option:
-                pp_option = PaddlePredictorOption(model_name=self.model_name)
-                if device:
-                    pp_option.device = device
-            trt_dynamic_shapes = (
-                self.config.get("Hpi", {})
-                .get("backend_configs", {})
-                .get("paddle_infer", {})
-                .get("trt_dynamic_shapes", None)
-            )
-            if trt_dynamic_shapes:
-                pp_option.trt_dynamic_shapes = trt_dynamic_shapes
-            self.pp_option = pp_option
-        else:
-            if not multibackend_config:
-                raise ValueError(
-                    "`multibackend_config` must be provided when using non-paddle backends."
-                )
-            self.multibackend_config = multibackend_config
+        self.pp_option = self._prepare_pp_option(pp_option, device)
 
         logging.debug(f"{self.__class__.__name__}: {self.model_dir}")
         self.benchmark = benchmark
@@ -161,7 +137,7 @@ class BasicPredictor(
         """
         if batch_size:
             self.batch_sampler.batch_size = batch_size
-            self.pp_option.batch_size = batch_size
+            self.pp_option.trt_max_batch_size = batch_size
         if device and device != self.pp_option.device:
             self.pp_option.device = device
         if pp_option and pp_option != self.pp_option:
@@ -187,6 +163,7 @@ class BasicPredictor(
             pp_option.device = device
         hpi_info = self.get_hpi_info()
         if hpi_info is not None:
+            logging.debug("HPI info: %s", hpi_info)
             hpi_info = hpi_info.model_dump(exclude_unset=True)
             trt_dynamic_shapes = (
                 hpi_info.get("backend_configs", {})
