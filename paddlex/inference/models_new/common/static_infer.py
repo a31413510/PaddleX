@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Tuple, List, Dict, Any, Iterator
+from typing import Union, Tuple, List, Any
 import os
-import inspect
-from abc import abstractmethod
 import lazy_paddle as paddle
 import numpy as np
 
@@ -24,20 +22,43 @@ from ....utils import logging
 from ...utils.pp_option import PaddlePredictorOption
 
 
+CACHE_DIR = ".cache"
+
+
 def collect_trt_shapes(
-    model_file, model_params, gpu_id, shape_range_info_path, trt_dynamic_shapes
+    model_file,
+    model_params,
+    gpu_id,
+    shape_range_info_path,
+    dynamic_shapes,
+    dynamic_shape_input_data,
 ):
+    dynamic_shape_input_data = dynamic_shape_input_data or {}
+
     config = paddle.inference.Config(model_file, model_params)
     config.enable_use_gpu(100, gpu_id)
-    min_arrs, opt_arrs, max_arrs = {}, {}, {}
-    for name, candidate_shapes in trt_dynamic_shapes.items():
-        min_shape, opt_shape, max_shape = candidate_shapes
-        min_arrs[name] = np.ones(min_shape, dtype=np.float32)
-        opt_arrs[name] = np.ones(opt_shape, dtype=np.float32)
-        max_arrs[name] = np.ones(max_shape, dtype=np.float32)
-
     config.collect_shape_range_info(shape_range_info_path)
     predictor = paddle.inference.create_predictor(config)
+
+    min_arrs, opt_arrs, max_arrs = {}, {}, {}
+    for name, candidate_shapes in dynamic_shapes.items():
+        min_shape, opt_shape, max_shape = candidate_shapes
+        # HACK: Currently the data type is hard-coded.
+        if name in dynamic_shape_input_data:
+            min_arrs[name] = np.array(
+                dynamic_shape_input_data[name][0], dtype=np.float32
+            )
+            opt_arrs[name] = np.array(
+                dynamic_shape_input_data[name][1], dtype=np.float32
+            )
+            max_arrs[name] = np.array(
+                dynamic_shape_input_data[name][2], dtype=np.float32
+            )
+        else:
+            min_arrs[name] = np.ones(min_shape, dtype=np.float32)
+            opt_arrs[name] = np.ones(opt_shape, dtype=np.float32)
+            max_arrs[name] = np.ones(max_shape, dtype=np.float32)
+
     # opt_arrs would be used twice to simulate the most common situations
     for arrs in [min_arrs, opt_arrs, opt_arrs, max_arrs]:
         for name, arr in arrs.items():
@@ -84,8 +105,6 @@ class Infer:
 
 
 class StaticInfer:
-    """Predictor based on Paddle Inference"""
-
     def __init__(
         self, model_dir: str, model_prefix: str, option: PaddlePredictorOption
     ) -> None:
@@ -154,40 +173,61 @@ class StaticInfer:
                 config.exp_disable_mixed_precision_ops({"feed", "fetch"})
             config.enable_use_gpu(100, self.option.device_id)
             if self.option.device == "gpu":
-                # NOTE: The pptrt settings are not aligned with those of FD.
                 precision_map = {
                     "trt_int8": Config.Precision.Int8,
                     "trt_fp32": Config.Precision.Float32,
                     "trt_fp16": Config.Precision.Half,
                 }
                 if self.option.run_mode in precision_map.keys():
+                    if self.option.trt_use_static:
+                        config.set_optim_cache_dir(str(self.model, CACHE_DIR))
+
                     config.enable_tensorrt_engine(
-                        workspace_size=(1 << 25) * self.option.batch_size,
-                        max_batch_size=self.option.batch_size,
-                        min_subgraph_size=self.option.min_subgraph_size,
+                        workspace_size=self.option.trt_max_workspace_size,
+                        max_batch_size=self.option.trt_max_batch_size,
+                        min_subgraph_size=self.option.trt_min_subgraph_size,
                         precision_mode=precision_map[self.option.run_mode],
                         use_static=self.option.trt_use_static,
-                        use_calib_mode=self.option.trt_calib_mode,
+                        use_calib_mode=self.option.trt_use_calib_mode,
                     )
 
-                    if not os.path.exists(self.option.shape_info_filename):
-                        logging.info(
-                            f"Dynamic shape info is collected into: {self.option.shape_info_filename}"
-                        )
-                        collect_trt_shapes(
-                            model_file,
-                            params_file,
-                            self.option.device_id,
-                            self.option.shape_info_filename,
-                            self.option.trt_dynamic_shapes,
-                        )
-                    else:
-                        logging.info(
-                            f"A dynamic shape info file ( {self.option.shape_info_filename} ) already exists. No need to collect again."
-                        )
-                    config.enable_tuned_tensorrt_dynamic_shape(
-                        self.option.shape_info_filename, True
-                    )
+                    if self.option.trt_use_dynamic_shapes:
+                        if self.option.trt_collect_shapes:
+                            if not os.path.exists(
+                                self.option.trt_shape_range_info_path
+                            ):
+                                logging.info(
+                                    f"Dynamic shape info is collected into: {self.option.trt_shape_range_info_path}"
+                                )
+                                collect_trt_shapes(
+                                    model_file,
+                                    params_file,
+                                    self.option.device_id,
+                                    self.option.trt_shape_range_info_path,
+                                    self.option.trt_dynamic_shapes,
+                                    self.option.trt_dyanmic_shape_input_data,
+                                )
+                            else:
+                                logging.info(
+                                    f"A dynamic shape info file ( {self.option.trt_shape_range_info_path} ) already exists. No need to collect again."
+                                )
+                            config.enable_tuned_tensorrt_dynamic_shape(
+                                self.option.trt_shape_range_info_path,
+                                self.option.trt_allow_build_at_runtime,
+                            )
+                        else:
+                            if self.option.trt_dynamic_shapes:
+                                min_shapes, opt_shapes, max_shapes = {}, {}, {}
+                                for (
+                                    key,
+                                    shapes,
+                                ) in self.option.trt_dynamic_shapes.items():
+                                    min_shapes[key] = shapes[0]
+                                    opt_shapes[key] = shapes[1]
+                                    max_shapes[key] = shapes[2]
+                                    config.set_trt_dynamic_shape_info(
+                                        min_shapes, max_shapes, opt_shapes
+                                    )
 
         elif self.option.device == "npu":
             config.enable_custom_device("npu")
@@ -212,8 +252,8 @@ class StaticInfer:
                 if hasattr(config, "disable_mkldnn"):
                     config.disable_mkldnn()
 
-        # Disable paddle inference logging
-        config.disable_glog_info()
+        if self.option.disable_glog_info:
+            config.disable_glog_info()
 
         config.set_cpu_math_library_num_threads(self.option.cpu_threads)
 
