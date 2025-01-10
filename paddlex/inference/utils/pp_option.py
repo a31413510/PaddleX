@@ -276,6 +276,7 @@ class PaddlePredictorOption(object):
         self._update("trt_allow_build_at_runtime", trt_allow_build_at_runtime)
 
     # For backward compatibility
+    # TODO: Issue deprecation warnings
     @property
     def min_subgraph_size(self):
         return self.trt_max_min_subgraph_size
