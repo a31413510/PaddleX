@@ -275,6 +275,39 @@ class PaddlePredictorOption(object):
     def trt_allow_build_at_runtime(self, trt_allow_build_at_runtime):
         self._update("trt_allow_build_at_runtime", trt_allow_build_at_runtime)
 
+    # For backward compatibility
+    @property
+    def min_subgraph_size(self):
+        return self.trt_max_min_subgraph_size
+
+    @min_subgraph_size.setter
+    def min_subgraph_size(self, min_subgraph_size):
+        self.trt_max_min_subgraph_size = min_subgraph_size
+
+    @property
+    def shape_info_filename(self):
+        return self.trt_shape_range_info_path
+
+    @shape_info_filename.setter
+    def shape_info_filename(self, shape_info_filename):
+        self.trt_shape_range_info_path = shape_info_filename
+
+    @property
+    def trt_calib_mode(self):
+        return self.trt_use_calib_mode
+
+    @trt_calib_mode.setter
+    def trt_calib_mode(self, trt_calib_mode):
+        self.trt_use_calib_mode = trt_calib_mode
+
+    @property
+    def batch_size(self):
+        return self.trt_max_batch_size
+
+    @batch_size.setter
+    def batch_size(self, batch_size):
+        self.trt_max_batch_size = batch_size
+
     def get_support_run_mode(self):
         """get supported run mode"""
         return self.SUPPORT_RUN_MODE
