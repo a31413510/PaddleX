@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Any, Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Union
 
 from pydantic import ValidationError
 
@@ -44,38 +44,35 @@ class BasicPredictor(
         device: Optional[str] = None,
         use_paddle: bool = True,
         pp_option: Optional[PaddlePredictorOption] = None,
-        mbi_config: Optional[MBIConfig] = None,
+        mbi_config: Optional[Union[Dict[str, Any], MBIConfig]] = None,
     ) -> None:
         """Initializes the BasicPredictor.
 
         Args:
             model_dir (str): The directory where the model files are stored.
-            config (Dict[str, Any], optional): The model configuration dictionary. Defaults to None.
-            device (str, optional): The device to run the inference engine on. Defaults to None.
-            use_paddle (bool, optional): Whether to use Paddle Inference. Defaults to True.
-            pp_option (PaddlePredictorOption, optional): The inference engine options. Defaults to None.
-            mbi_config (Optional[Dict[str, Any]], optional): The multi-backend
-                inference configuration dictionary. Defaults to None.
+            config (Optional[Dict[str, Any]], optional): The model configuration
+                dictionary. Defaults to None.
+            device (Optional[str], optional): The device to run the inference
+                engine on. Defaults to None.
+            use_paddle (bool, optional): Whether to use Paddle Inference.
+                Defaults to True.
+            pp_option (Optional[PaddlePredictorOption], optional): The inference
+                engine options. Defaults to None.
+            mbi_config (Optional[Union[Dict[str, Any], MBIConfig]], optional):
+                The multi-backend inference configuration dictionary.
+                Defaults to None.
         """
         super().__init__(model_dir=model_dir, config=config)
 
         self._use_paddle = use_paddle
         if use_paddle:
-            if pp_option is None or device is not None:
-                device_info = self._get_device_info(device)
-            else:
-                device_info = None
-            self._pp_option = self._prepare_pp_option(pp_option, device_info)
+            self._pp_option = self._prepare_pp_option(pp_option, device)
         else:
             if mbi_config is None:
                 raise ValueError(
                     "`mbi_config` must not be None when not using Paddle Inference."
                 )
-            if device is not None:
-                device_info = self._get_device_info(device)
-            else:
-                device_info = None
-            self._mbi_config = self._prepare_mbi_config(mbi_config, device_info)
+            self._mbi_config = self._prepare_mbi_config(mbi_config, device)
 
         logging.debug(f"{self.__class__.__name__}: {self.model_dir}")
         self.benchmark = benchmark
@@ -170,8 +167,12 @@ class BasicPredictor(
     def _prepare_pp_option(
         self,
         pp_option: Optional[PaddlePredictorOption],
-        device_info: Optional[Tuple[str, Optional[int]]],
+        device: Optional[str],
     ) -> PaddlePredictorOption:
+        if pp_option is None or device is not None:
+            device_info = self._get_device_info(device)
+        else:
+            device_info = None
         if pp_option is None:
             pp_option = PaddlePredictorOption(model_name=self.model_name)
         else:
@@ -202,16 +203,21 @@ class BasicPredictor(
 
     def _prepare_mbi_config(
         self,
-        mbi_config: MBIConfig,
-        device_info: Optional[Tuple[str, Optional[int]]],
+        mbi_config: Union[Dict[str, Any], MBIConfig],
+        device: Optional[str],
     ) -> MBIConfig:
-        if device_info is not None:
+        # TODO: Avoid extra copying
+        if not isinstance(mbi_config, MBIConfig):
+            mbi_config = MBIConfig.model_validate(mbi_config)
+        if device is not None:
+            device_type, device_id = self._get_device_info(device)
             return mbi_config.model_copy(
-                update={"device_type": device_info[0], "device_id": device_info[1]}
+                update={"device_type": device_type, "device_id": device_id}
             )
         else:
             return mbi_config.model_copy()
 
+    # Should this be static?
     def _get_device_info(self, device):
         if device is None:
             device = get_default_device()

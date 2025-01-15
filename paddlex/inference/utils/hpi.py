@@ -42,7 +42,7 @@ class HPIInfo(BaseModel):
 
 
 # For multi-backend inference only
-InferenceBackend: TypeAlias = Literal["openvino", "onnx_runtime", "tensorrt"]
+InferenceBackend: TypeAlias = Literal["openvino", "onnxruntime", "tensorrt"]
 
 
 class OpenVINOConfig(BaseModel):
@@ -60,7 +60,7 @@ class TensorRTConfig(BaseModel):
 
 class InferenceBackendConfigs(BaseModel):
     openvino: Optional[OpenVINOConfig] = None
-    onnx_runtime: Optional[ONNXRuntimeConfig] = None
+    onnxruntime: Optional[ONNXRuntimeConfig] = None
     tensorrt: Optional[TensorRTConfig] = None
 
 
