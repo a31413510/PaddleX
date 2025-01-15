@@ -15,8 +15,13 @@
 import os
 from typing import Dict, List
 
-from ...utils.device import parse_device, set_env_for_device, get_default_device
 from ...utils import logging
+from ...utils.device import (
+    constr_device,
+    get_default_device,
+    parse_device,
+    set_env_for_device,
+)
 from .new_ir_blacklist import NEWIR_BLOCKLIST
 
 
@@ -63,11 +68,11 @@ class PaddlePredictorOption(object):
 
     def _get_default_config(self):
         """get default config"""
-        device_type, device_id = parse_device(get_default_device())
+        device_type, device_ids = parse_device(get_default_device())
         return {
             "run_mode": "paddle",
-            "device": device_type,
-            "device_id": 0 if device_id is None else device_id[0],
+            "device_type": device_type,
+            "device_id": None if device_ids is None else device_ids[0],
             "cpu_threads": 8,
             "delete_pass": [],
             "enable_new_ir": True if self.model_name not in NEWIR_BLOCKLIST else False,
@@ -106,15 +111,23 @@ class PaddlePredictorOption(object):
 
     @property
     def device_type(self):
-        return self._cfg["device"]
+        return self._cfg["device_type"]
+
+    @device_type.setter
+    def device_type(self, device_type):
+        self._update("device_type", device_type)
 
     @property
     def device_id(self):
         return self._cfg["device_id"]
 
+    @device_id.setter
+    def device_id(self, device_id):
+        self._update("device_id", device_id)
+
     @property
     def device(self):
-        return self._cfg["device"]
+        return constr_device(self.device_type, self.device_id)
 
     @device.setter
     def device(self, device: str):
@@ -127,8 +140,8 @@ class PaddlePredictorOption(object):
             raise ValueError(
                 f"The device type must be one of {support_run_mode_str}, but received {repr(device_type)}."
             )
-        self._update("device", device_type)
-        device_id = device_ids[0] if device_ids is not None else 0
+        self._update("device_type", device_type)
+        device_id = device_ids[0] if device_ids is not None else None
         self._update("device_id", device_id)
         set_env_for_device(device)
         if device_type not in ("cpu"):

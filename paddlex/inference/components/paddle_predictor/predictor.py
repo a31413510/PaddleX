@@ -158,11 +158,11 @@ class BasePaddlePredictor(BaseComponent):
         config = Config(model_file, params_file)
 
         config.enable_memory_optim()
-        if self.option.device in ("gpu", "dcu"):
-            if self.option.device == "gpu":
+        if self.option.device_type in ("gpu", "dcu"):
+            if self.option.device_type == "gpu":
                 config.exp_disable_mixed_precision_ops({"feed", "fetch"})
-            config.enable_use_gpu(100, self.option.device_id)
-            if self.option.device == "gpu":
+            config.enable_use_gpu(100, self.option.device_id or 0)
+            if self.option.device_type == "gpu":
                 # NOTE: The pptrt settings are not aligned with those of FD.
                 precision_map = {
                     "trt_int8": Config.Precision.Int8,
@@ -216,7 +216,7 @@ class BasePaddlePredictor(BaseComponent):
                                 collect_trt_shape_range_info(
                                     model_file,
                                     params_file,
-                                    self.option.device_id,
+                                    self.option.device_id or 0,
                                     str(trt_shape_range_info_path),
                                     self.option.trt_dynamic_shapes,
                                     self.option.trt_dynamic_shape_input_data,
@@ -243,13 +243,13 @@ class BasePaddlePredictor(BaseComponent):
                                     "No dynamic shape information provided"
                                 )
 
-        elif self.option.device == "npu":
+        elif self.option.device_type == "npu":
             config.enable_custom_device("npu")
-        elif self.option.device == "xpu":
+        elif self.option.device_type == "xpu":
             pass
-        elif self.option.device == "mlu":
+        elif self.option.device_type == "mlu":
             config.enable_custom_device("mlu")
-        elif self.option.device == "gcu":
+        elif self.option.device_type == "gcu":
             assert paddle.device.is_compiled_with_custom_device("gcu"), (
                 "Args device cannot be set as gcu while your paddle "
                 "is not compiled with gcu!"
@@ -270,7 +270,7 @@ class BasePaddlePredictor(BaseComponent):
                 pass_builder = config.pass_builder()
                 gcu_passes.append_passes_for_legacy_ir(pass_builder, name)
         else:
-            assert self.option.device == "cpu"
+            assert self.option.device_type == "cpu"
             config.disable_gpu()
             if "mkldnn" in self.option.run_mode:
                 try:
@@ -291,8 +291,10 @@ class BasePaddlePredictor(BaseComponent):
 
         config.set_cpu_math_library_num_threads(self.option.cpu_threads)
 
-        if not (self.option.device == "gpu" and self.option.run_mode.startswith("trt")):
-            if self.option.device in ("cpu", "gpu"):
+        if not (
+            self.option.device_type == "gpu" and self.option.run_mode.startswith("trt")
+        ):
+            if self.option.device_type in ("cpu", "gpu"):
                 if hasattr(config, "enable_new_ir"):
                     config.enable_new_ir(self.option.enable_new_ir)
                 config.set_optimization_level(3)
@@ -302,7 +304,7 @@ class BasePaddlePredictor(BaseComponent):
         for del_p in self.option.delete_pass:
             config.delete_pass(del_p)
 
-        if self.option.device in ("gpu", "dcu"):
+        if self.option.device_type in ("gpu", "dcu"):
             if paddle.is_compiled_with_rocm():
                 # Delete unsupported passes in dcu
                 config.delete_pass("conv2d_add_act_fuse_pass")

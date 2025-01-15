@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Tuple, List, Any
+import abc
+from typing import Union, Sequence, Tuple, List, Any
 import lazy_paddle as paddle
 import numpy as np
 from pathlib import Path
@@ -20,6 +21,7 @@ from pathlib import Path
 from ....utils.flags import FLAGS_json_format_model
 from ....utils import logging
 from ...utils.pp_option import PaddlePredictorOption
+from ...utils.hpi import MBIConfig
 
 
 CACHE_DIR = ".cache"
@@ -113,8 +115,7 @@ def _collect_trt_shape_range_info(
     # handle this?
 
 
-class Copy2GPU:
-
+class PaddleCopy2GPU:
     def __init__(self, input_handlers):
         super().__init__()
         self.input_handlers = input_handlers
@@ -125,8 +126,7 @@ class Copy2GPU:
             self.input_handlers[idx].copy_from_cpu(x[idx])
 
 
-class Copy2CPU:
-
+class PaddleCopy2CPU:
     def __init__(self, output_handlers):
         super().__init__()
         self.output_handlers = output_handlers
@@ -139,8 +139,7 @@ class Copy2CPU:
         return output
 
 
-class Infer:
-
+class PaddleModelInfer:
     def __init__(self, predictor):
         super().__init__()
         self.predictor = predictor
@@ -149,29 +148,54 @@ class Infer:
         self.predictor.run()
 
 
-class StaticInfer:
+class StaticInfer(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def __call__(self, x: Sequence[np.ndarray]) -> List[np.ndarray]:
+        raise NotImplementedError
+
+
+class PaddleInfer(StaticInfer):
     def __init__(
-        self, model_dir: str, model_prefix: str, option: PaddlePredictorOption
+        self,
+        model_dir: str,
+        model_prefix: str,
+        option: PaddlePredictorOption,
     ) -> None:
         super().__init__()
         self.model_dir = model_dir
         self.model_prefix = model_prefix
         self._update_option(option)
 
+    @property
+    def option(self) -> PaddlePredictorOption:
+        return self._option if hasattr(self, "_option") else None
+
+    # TODO: We should re-evaluate whether allowing changes to `option` across
+    # different calls provides any benefits.
+    @option.setter
+    def option(self, option: Union[None, PaddlePredictorOption]) -> None:
+        if option:
+            self._update_option(option)
+
+    @property
+    def benchmark(self):
+        return {
+            "Copy2GPU": self.copy2gpu,
+            "Infer": self.infer,
+            "Copy2CPU": self.copy2cpu,
+        }
+
+    def __call__(self, x: Sequence[np.ndarray]) -> List[np.ndarray]:
+        self.copy2gpu(x)
+        self.infer()
+        pred = self.copy2cpu()
+        return pred
+
     def _update_option(self, option: PaddlePredictorOption) -> None:
         if self.option and option == self.option:
             return
         self._option = option
         self._reset()
-
-    @property
-    def option(self) -> PaddlePredictorOption:
-        return self._option if hasattr(self, "_option") else None
-
-    @option.setter
-    def option(self, option: Union[None, PaddlePredictorOption]) -> None:
-        if option:
-            self._update_option(option)
 
     def _reset(self) -> None:
         if not self.option:
@@ -182,10 +206,10 @@ class StaticInfer:
             input_handlers,
             output_handlers,
         ) = self._create()
-        self.copy2gpu = Copy2GPU(input_handlers)
-        self.copy2cpu = Copy2CPU(output_handlers)
-        self.infer = Infer(predictor)
-        self.option.changed = False
+        # TODO: Would a more generic name like `copy2device` be better here?
+        self.copy2gpu = PaddleCopy2GPU(input_handlers)
+        self.copy2cpu = PaddleCopy2CPU(output_handlers)
+        self.infer = PaddleModelInfer(predictor)
 
     def _create(
         self,
@@ -213,11 +237,11 @@ class StaticInfer:
         config = Config(model_file, params_file)
 
         config.enable_memory_optim()
-        if self.option.device in ("gpu", "dcu"):
-            if self.option.device == "gpu":
+        if self.option.device_type in ("gpu", "dcu"):
+            if self.option.device_type == "gpu":
                 config.exp_disable_mixed_precision_ops({"feed", "fetch"})
-            config.enable_use_gpu(100, self.option.device_id)
-            if self.option.device == "gpu":
+            config.enable_use_gpu(100, self.option.device_id or 0)
+            if self.option.device_type == "gpu":
                 precision_map = {
                     "trt_int8": Config.Precision.Int8,
                     "trt_fp32": Config.Precision.Float32,
@@ -231,14 +255,14 @@ class StaticInfer:
                         params_file,
                     )
 
-        elif self.option.device == "npu":
+        elif self.option.device_type == "npu":
             config.enable_custom_device("npu")
-        elif self.option.device == "xpu":
+        elif self.option.device_type == "xpu":
             pass
-        elif self.option.device == "mlu":
+        elif self.option.device_type == "mlu":
             config.enable_custom_device("mlu")
         else:
-            assert self.option.device == "cpu"
+            assert self.option.device_type == "cpu"
             config.disable_gpu()
             if "mkldnn" in self.option.run_mode:
                 try:
@@ -259,9 +283,10 @@ class StaticInfer:
 
         config.set_cpu_math_library_num_threads(self.option.cpu_threads)
 
-        if self.option.device in ("cpu", "gpu"):
+        if self.option.device_type in ("cpu", "gpu"):
             if not (
-                self.option.device == "gpu" and self.option.run_mode.startswith("trt")
+                self.option.device_type == "gpu"
+                and self.option.run_mode.startswith("trt")
             ):
                 if hasattr(config, "enable_new_ir"):
                     config.enable_new_ir(self.option.enable_new_ir)
@@ -272,7 +297,7 @@ class StaticInfer:
         for del_p in self.option.delete_pass:
             config.delete_pass(del_p)
 
-        if self.option.device in ("gpu", "dcu"):
+        if self.option.device_type in ("gpu", "dcu"):
             if paddle.is_compiled_with_rocm():
                 # Delete unsupported passes in dcu
                 config.delete_pass("conv2d_add_act_fuse_pass")
@@ -293,22 +318,6 @@ class StaticInfer:
             output_handler = predictor.get_output_handle(output_name)
             output_handlers.append(output_handler)
         return predictor, input_handlers, output_handlers
-
-    def __call__(self, x) -> List[Any]:
-        if self.option.changed:
-            self._reset()
-        self.copy2gpu(x)
-        self.infer()
-        pred = self.copy2cpu()
-        return pred
-
-    @property
-    def benchmark(self):
-        return {
-            "Copy2GPU": self.copy2gpu,
-            "Infer": self.infer,
-            "Copy2CPU": self.copy2cpu,
-        }
 
     def _configure_trt(self, config, precision_mode, model_file, params_file):
         config.set_optim_cache_dir(str(self.model_dir / CACHE_DIR))
@@ -353,7 +362,7 @@ class StaticInfer:
                     _collect_trt_shape_range_info(
                         model_file,
                         params_file,
-                        self.option.device_id,
+                        self.option.device_id or 0,
                         str(trt_shape_range_info_path),
                         self.option.trt_dynamic_shapes,
                         self.option.trt_dynamic_shape_input_data,
@@ -377,3 +386,31 @@ class StaticInfer:
                         )
                 else:
                     raise RuntimeError("No dynamic shape information provided")
+
+
+class MultibackendInfer(StaticInfer):
+    def __init__(
+        self,
+        model_dir: str,
+        model_prefix: str,
+        config: MBIConfig,
+    ) -> None:
+        super().__init__()
+        self._model_dir = model_dir
+        self._model_prefix = model_prefix
+        self._config = config
+
+    @property
+    def model_dir(self) -> str:
+        return self._model_dir
+
+    @property
+    def model_prefix(self) -> str:
+        return self._model_prefix
+
+    @property
+    def config(self) -> MBIConfig:
+        return self._config
+
+    def __call__(self, x: Sequence[np.ndarray]) -> List[np.ndarray]:
+        raise NotImplementedError
