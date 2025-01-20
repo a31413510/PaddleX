@@ -395,10 +395,13 @@ class MultibackendInfer(StaticInfer):
         model_prefix: str,
         config: MBIConfig,
     ) -> None:
+        from .ultra_infer import RuntimeOption
+
         super().__init__()
         self._model_dir = model_dir
         self._model_prefix = model_prefix
         self._config = config
+        self._ui_option = RuntimeOption()
 
     @property
     def model_dir(self) -> str:
@@ -414,3 +417,9 @@ class MultibackendInfer(StaticInfer):
 
     def __call__(self, x: Sequence[np.ndarray]) -> List[np.ndarray]:
         raise NotImplementedError
+
+    def _update_ui_option(self, ui_option):
+        pass
+
+    def _build_ui_model(self, ui_option):
+        pass
