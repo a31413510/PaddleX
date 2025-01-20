@@ -34,7 +34,6 @@ class ImageClassificationPipeline(BasePipeline):
         device: str = None,
         pp_option: PaddlePredictorOption = None,
         use_hpip: bool = False,
-        hpi_params: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Initializes the class with given configurations and options.
@@ -44,17 +43,17 @@ class ImageClassificationPipeline(BasePipeline):
             device (str): The device to run the prediction on. Default is None.
             pp_option (PaddlePredictorOption): Options for PaddlePaddle predictor. Default is None.
             use_hpip (bool): Whether to use high-performance inference (hpip) for prediction. Defaults to False.
-            hpi_params (Optional[Dict[str, Any]]): HPIP specific parameters. Default is None.
         """
-        super().__init__(
-            device=device, pp_option=pp_option, use_hpip=use_hpip, hpi_params=hpi_params
-        )
+        super().__init__(device=device, pp_option=pp_option, use_hpip=use_hpip)
 
         image_classification_model_config = config["SubModules"]["ImageClassification"]
+        model_kwargs = {}
+        if (topk := image_classification_model_config.get("topk", None)) is not None:
+            model_kwargs = {"topk": topk}
         self.image_classification_model = self.create_model(
-            image_classification_model_config
+            image_classification_model_config, **model_kwargs
         )
-        self.topk = image_classification_model_config["topk"]
+        self.topk = image_classification_model_config.get("topk", 5)
 
     def predict(
         self, input: str | list[str] | np.ndarray | list[np.ndarray], **kwargs
@@ -68,4 +67,6 @@ class ImageClassificationPipeline(BasePipeline):
         Returns:
             TopkResult: The predicted top k results.
         """
-        yield from self.image_classification_model(input, topk=self.topk)
+
+        topk = kwargs.pop("topk", self.topk)
+        yield from self.image_classification_model(input, topk=topk)

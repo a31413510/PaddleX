@@ -61,7 +61,7 @@ class TablePredictor(BasicPredictor):
         infer = self.create_static_infer()
 
         postprocessors = TableLabelDecode(
-            model_name="SLANet",
+            model_name=self.config["Global"]["model_name"],
             merge_no_span_structure=self.config["PreProcess"]["transform_ops"][1][
                 "TableLabelEncode"
             ]["merge_no_span_structure"],

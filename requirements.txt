@@ -3,6 +3,7 @@ imagesize
 colorlog
 PyYAML
 filelock
+ftfy
 ruamel.yaml
 chardet
 numpy==1.24.4
@@ -33,8 +34,8 @@ typing_extensions>=4.11
 qianfan==0.0.3
 langchain==0.1.5
 langchain-community==0.0.17
-erniebot == 0.5.0
-erniebot-agent == 0.5.0
+erniebot == 0.5.9
+erniebot-agent == 0.5.2
 unstructured
 networkx
 faiss-cpu
