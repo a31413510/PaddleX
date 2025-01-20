@@ -14,9 +14,9 @@
 
 from os import PathLike
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing_extensions import TypeAlias
 
 from ...utils.flags import FLAGS_json_format_model
@@ -59,17 +59,24 @@ class TensorRTConfig(BaseModel):
 
 
 class InferenceBackendConfigs(BaseModel):
-    openvino: Optional[OpenVINOConfig] = None
-    onnxruntime: Optional[ONNXRuntimeConfig] = None
-    tensorrt: Optional[TensorRTConfig] = None
+    openvino: OpenVINOConfig = Field(default_factory=OpenVINOConfig)
+    onnxruntime: ONNXRuntimeConfig = Field(default_factory=ONNXRuntimeConfig)
+    tensorrt: TensorRTConfig = Field(default_factory=TensorRTConfig)
 
 
 class MBIConfig(BaseModel):
-    # TODO: Support auto-selection
-    backend: InferenceBackend
     device_type: str
     device_id: Optional[int] = None
-    backend_configs: Optional[InferenceBackendConfigs] = None
+    auto_config: bool = True
+    backend: Optional[InferenceBackend] = None
+    model_name: Optional[str] = None
+    backend_configs: Optional[Dict[str, Any]] = None
+    # TODO: Add more validation logic here
+
+
+class ModelInfo(BaseModel):
+    name: str
+    hpi_info: Optional[HPIInfo] = None
 
 
 ModelFormat: TypeAlias = Literal["PADDLE", "ONNX"]

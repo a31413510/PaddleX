@@ -68,10 +68,6 @@ class BasicPredictor(
         if use_paddle:
             self._pp_option = self._prepare_pp_option(pp_option, device)
         else:
-            if mbi_config is None:
-                raise ValueError(
-                    "`mbi_config` must not be None when not using Paddle Inference."
-                )
             self._mbi_config = self._prepare_mbi_config(mbi_config, device)
 
         logging.debug(f"{self.__class__.__name__}: {self.model_dir}")
@@ -161,7 +157,9 @@ class BasicPredictor(
             return PaddleInfer(self.model_dir, self.MODEL_FILE_PREFIX, self._pp_option)
         else:
             return MultibackendInfer(
-                self.model_dir, self.MODEL_FILE_PREFIX, self._mbi_config
+                self.model_dir,
+                self.MODEL_FILE_PREFIX,
+                self._mbi_config,
             )
 
     def _prepare_pp_option(
@@ -183,39 +181,89 @@ class BasicPredictor(
             pp_option.device_id = device_info[1]
         hpi_info = self.get_hpi_info()
         if hpi_info is not None:
-            logging.debug("HPI info: %s", hpi_info)
             hpi_info = hpi_info.model_dump(exclude_unset=True)
-            trt_dynamic_shapes = (
-                hpi_info.get("backend_configs", {})
-                .get("paddle_infer", {})
-                .get("trt_dynamic_shapes", None)
-            )
-            if trt_dynamic_shapes:
-                pp_option.trt_dynamic_shapes = trt_dynamic_shapes
-            trt_dynamic_shape_input_data = (
-                hpi_info.get("backend_configs", {})
-                .get("paddle_infer", {})
-                .get("trt_dynamic_shape_input_data", None)
-            )
-            if trt_dynamic_shape_input_data:
-                pp_option.trt_dynamic_shape_input_data = trt_dynamic_shape_input_data
+            if pp_option.trt_dynamic_shapes is None:
+                trt_dynamic_shapes = (
+                    hpi_info.get("backend_configs", {})
+                    .get("paddle_infer", {})
+                    .get("trt_dynamic_shapes", None)
+                )
+                if trt_dynamic_shapes is not None:
+                    logging.debug(
+                        "TensorRT dynamic shapes set to %s", trt_dynamic_shapes
+                    )
+                    pp_option.trt_dynamic_shapes = trt_dynamic_shapes
+            if pp_option.trt_dynamic_shape_input_data is None:
+                trt_dynamic_shape_input_data = (
+                    hpi_info.get("backend_configs", {})
+                    .get("paddle_infer", {})
+                    .get("trt_dynamic_shape_input_data", None)
+                )
+                if trt_dynamic_shape_input_data is not None:
+                    logging.debug(
+                        "TensorRT dynamic shape input data set to %s",
+                        trt_dynamic_shape_input_data,
+                    )
+                    pp_option.trt_dynamic_shape_input_data = (
+                        trt_dynamic_shape_input_data
+                    )
         return pp_option
 
     def _prepare_mbi_config(
         self,
-        mbi_config: Union[Dict[str, Any], MBIConfig],
+        mbi_config: Optional[Union[Dict[str, Any], MBIConfig]],
         device: Optional[str],
     ) -> MBIConfig:
-        # TODO: Avoid extra copying
+        from_scratch = mbi_config is None
+
+        if from_scratch or device is not None:
+            device_info = self._get_device_info(device)
+        else:
+            device_info = None
+
+        if from_scratch:
+            mbi_config = {
+                "device_type": device_info[0],
+                "device_id": device_info[1],
+                "model_name": self.model_name,
+            }
         if not isinstance(mbi_config, MBIConfig):
             mbi_config = MBIConfig.model_validate(mbi_config)
-        if device is not None:
-            device_type, device_id = self._get_device_info(device)
-            return mbi_config.model_copy(
-                update={"device_type": device_type, "device_id": device_id}
-            )
-        else:
-            return mbi_config.model_copy()
+        if not from_scratch:
+            if device is not None:
+                mbi_config = mbi_config.model_copy(
+                    update={"device_type": device_info[0], "device_id": device_info[1]},
+                    deep=True,
+                )
+            else:
+                mbi_config = mbi_config.model_copy(deep=True)
+
+        if not mbi_config.auto_config:
+            backend_configs = mbi_config.backend_configs or {}
+            hpi_info = self.get_hpi_info()
+            if hpi_info is not None:
+                if (
+                    backend_configs.get("tensorrt", {}).get("dynamic_shapes", None)
+                    is None
+                ):
+                    trt_dynamic_shapes = (
+                        hpi_info.get("backend_configs", {})
+                        .get("tensorrt", {})
+                        .get("dynamic_shapes", None)
+                    )
+                    if trt_dynamic_shapes is not None:
+                        logging.debug(
+                            "TensorRT dynamic shapes set to %s", trt_dynamic_shapes
+                        )
+                        if "tensorrt" not in backend_configs:
+                            backend_configs["tensorrt"] = {}
+                        backend_configs["tensorrt"][
+                            "dynamic_shapes"
+                        ] = trt_dynamic_shapes
+            if backend_configs and mbi_config.backend_configs != backend_configs:
+                mbi_config.backend_configs = backend_configs
+
+        return mbi_config
 
     # Should this be static?
     def _get_device_info(self, device):

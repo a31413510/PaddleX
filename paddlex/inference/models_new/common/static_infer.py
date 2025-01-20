@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import abc
-from typing import Union, Sequence, Tuple, List, Any
+from typing import Any, Dict, Union, Sequence, Tuple, List
 import lazy_paddle as paddle
 import numpy as np
 from pathlib import Path
@@ -21,7 +21,7 @@ from pathlib import Path
 from ....utils.flags import FLAGS_json_format_model
 from ....utils import logging
 from ...utils.pp_option import PaddlePredictorOption
-from ...utils.hpi import MBIConfig
+from ...utils.hpi import MBIConfig, InferenceBackendConfigs
 
 
 CACHE_DIR = ".cache"
@@ -395,13 +395,10 @@ class MultibackendInfer(StaticInfer):
         model_prefix: str,
         config: MBIConfig,
     ) -> None:
-        from .ultra_infer import RuntimeOption
-
         super().__init__()
         self._model_dir = model_dir
         self._model_prefix = model_prefix
         self._config = config
-        self._ui_option = RuntimeOption()
 
     @property
     def model_dir(self) -> str:
@@ -418,8 +415,34 @@ class MultibackendInfer(StaticInfer):
     def __call__(self, x: Sequence[np.ndarray]) -> List[np.ndarray]:
         raise NotImplementedError
 
-    def _update_ui_option(self, ui_option):
-        pass
+    def _prepare_ui_option(self, ui_option=None):
+        from ultra_infer import RuntimeOption
+
+        if self._config.auto_config:
+            raise RuntimeError("Automatic configuration is not supported yet")
+        backend = self._config.backend
+        if backend is None:
+            raise RuntimeError(
+                "When automatic configuration is not used, the inference backend has to be specified manually."
+            )
+
+        backend_configs: Dict[str, Any] = {}
+        if self._config.backend_configs is not None:
+            for k, v in self._config.backend_configs.items():
+                backend_configs[k] = {**v, **(backend_configs[k] or {})}
+        backend_configs = InferenceBackendConfigs.model_validate(backend_configs)
+
+        if ui_option is None:
+            ui_option = RuntimeOption()
+        if backend == "openvino":
+            backend_config = backend_configs.openvino
+
+        elif backend == "onnxruntime":
+            backend_config = backend_configs.onnxruntime
+        elif backend == "tensorrt":
+            backend_config = backend_configs.tensorrt
+        else:
+            raise RuntimeError(f"Unsupported inference backend {repr(backend)}")
 
     def _build_ui_model(self, ui_option):
         pass
