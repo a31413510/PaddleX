@@ -18,10 +18,15 @@ import lazy_paddle as paddle
 import numpy as np
 from pathlib import Path
 
-from ....utils.flags import FLAGS_json_format_model
 from ....utils import logging
 from ...utils.pp_option import PaddlePredictorOption
-from ...utils.hpi import MBIConfig, InferenceBackendConfigs
+from ...utils.hpi import (
+    MBIConfig,
+    ONNXRuntimeConfig,
+    OpenVINOConfig,
+    TensorRTConfig,
+    get_model_paths,
+)
 
 
 CACHE_DIR = ".cache"
@@ -158,12 +163,12 @@ class PaddleInfer(StaticInfer):
     def __init__(
         self,
         model_dir: str,
-        model_prefix: str,
+        model_file_prefix: str,
         option: PaddlePredictorOption,
     ) -> None:
         super().__init__()
         self.model_dir = model_dir
-        self.model_prefix = model_prefix
+        self.model_file_prefix = model_file_prefix
         self._update_option(option)
 
     @property
@@ -221,20 +226,12 @@ class PaddleInfer(StaticInfer):
         """_create"""
         from lazy_paddle.inference import Config, create_predictor
 
-        if FLAGS_json_format_model:
-            model_file = (self.model_dir / f"{self.model_prefix}.json").as_posix()
-        # when FLAGS_json_format_model is not set, use inference.json if exist, otherwise inference.pdmodel
-        else:
-            model_file = self.model_dir / f"{self.model_prefix}.json"
-            if model_file.exists():
-                model_file = model_file.as_posix()
-            # default by `pdmodel` suffix
-            else:
-                model_file = (
-                    self.model_dir / f"{self.model_prefix}.pdmodel"
-                ).as_posix()
-        params_file = (self.model_dir / f"{self.model_prefix}.pdiparams").as_posix()
-        config = Config(model_file, params_file)
+        model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
+        if "PADDLE" not in model_paths:
+            raise RuntimeError("No valid paddle model found")
+        model_file, params_file = model_paths["PADDLE"]
+
+        config = Config(str(model_file), str(params_file))
 
         config.enable_memory_optim()
         if self.option.device_type in ("gpu", "dcu"):
@@ -320,7 +317,8 @@ class PaddleInfer(StaticInfer):
         return predictor, input_handlers, output_handlers
 
     def _configure_trt(self, config, precision_mode, model_file, params_file):
-        config.set_optim_cache_dir(str(self.model_dir / CACHE_DIR))
+        cache_dir = self.model_dir / CACHE_DIR / "paddle_inference"
+        config.set_optim_cache_dir(str(cache_dir / "optim_cache"))
 
         config.enable_tensorrt_engine(
             workspace_size=self.option.trt_max_workspace_size,
@@ -339,9 +337,7 @@ class PaddleInfer(StaticInfer):
                         self.option.trt_shape_range_info_path
                     )
                 else:
-                    trt_shape_range_info_path = (
-                        self.model_dir / CACHE_DIR / "shape_range_info.pbtxt"
-                    )
+                    trt_shape_range_info_path = cache_dir / "shape_range_info.pbtxt"
                 should_collect_shape_range_info = True
                 if not trt_shape_range_info_path.exists():
                     trt_shape_range_info_path.parent.mkdir(parents=True, exist_ok=True)
@@ -392,57 +388,99 @@ class MultibackendInfer(StaticInfer):
     def __init__(
         self,
         model_dir: str,
-        model_prefix: str,
+        model_file_prefix: str,
         config: MBIConfig,
     ) -> None:
         super().__init__()
         self._model_dir = model_dir
-        self._model_prefix = model_prefix
+        self._model_file_prefix = model_file_prefix
         self._config = config
+        self._ui_option = self._prepare_ui_option()
+        self._ui_runtime = self._build_ui_runtime(self._ui_option)
 
     @property
     def model_dir(self) -> str:
         return self._model_dir
 
     @property
-    def model_prefix(self) -> str:
-        return self._model_prefix
+    def model_file_prefix(self) -> str:
+        return self._model_file_prefix
 
     @property
     def config(self) -> MBIConfig:
         return self._config
 
     def __call__(self, x: Sequence[np.ndarray]) -> List[np.ndarray]:
-        raise NotImplementedError
+        num_inputs = self._ui_runtime.num_inputs()
+        if len(x) != num_inputs:
+            raise ValueError(f"Expected {num_inputs} inputs but got {len(x)} instead")
+        inputs = {}
+        for idx, input_ in enumerate(x):
+            input_name = self._ui_runtime.get_input_info(idx).name
+            input_ = np.ascontiguousarray(input_)
+            inputs[input_name] = input_
+        outputs = self._ui_runtime.infer(inputs)
+        return outputs
 
     def _prepare_ui_option(self, ui_option=None):
-        from ultra_infer import RuntimeOption
+        from ultra_infer import RuntimeOption, ModelFormat
 
         if self._config.auto_config:
             raise RuntimeError("Automatic configuration is not supported yet")
         backend = self._config.backend
         if backend is None:
             raise RuntimeError(
-                "When automatic configuration is not used, the inference backend has to be specified manually."
+                "When automatic configuration is not used, the inference backend must be specified manually."
             )
-
-        backend_configs: Dict[str, Any] = {}
-        if self._config.backend_configs is not None:
-            for k, v in self._config.backend_configs.items():
-                backend_configs[k] = {**v, **(backend_configs[k] or {})}
-        backend_configs = InferenceBackendConfigs.model_validate(backend_configs)
+        backend_config = self._config.backend_config or {}
 
         if ui_option is None:
             ui_option = RuntimeOption()
-        if backend == "openvino":
-            backend_config = backend_configs.openvino
 
+        if self._config.device_type == "cpu":
+            pass
+        elif self._config.device_type == "gpu":
+            ui_option.use_gpu(self._config.device_id or 0)
+        else:
+            raise RuntimeError(
+                f"Unsupported device type {repr(self._config.device_type)}"
+            )
+
+        model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
+        # XXX: The model format is hard-coded for now
+        if "ONNX" not in model_paths:
+            raise RuntimeError("ONNX model is required")
+        ui_option.set_model_path(str(model_paths["ONNX"]), "", ModelFormat.ONNX)
+
+        if backend == "openvino":
+            backend_config = OpenVINOConfig.model_validate(backend_config)
+            ui_option.use_openvino_backend()
+            ui_option.set_cpu_thread_num(backend_config.cpu_num_threads)
         elif backend == "onnxruntime":
-            backend_config = backend_configs.onnxruntime
+            backend_config = ONNXRuntimeConfig.model_validate(backend_config)
+            ui_option.use_ort_backend()
+            ui_option.set_cpu_thread_num(backend_config.cpu_num_threads)
         elif backend == "tensorrt":
-            backend_config = backend_configs.tensorrt
+            backend_config = TensorRTConfig.model_validate(backend_config)
+            ui_option.use_trt_backend()
+            ui_option.trt_option.serialize_file = str(
+                self.model_dir / CACHE_DIR / "tensorrt" / "trt_serialized.trt"
+            )
+            if backend_config.precision == "FP16":
+                ui_option.trt_option.enable_fp16 = True
+            if not backend_config.use_dynamic_shapes:
+                raise RuntimeError(
+                    "TensorRT static shape inference is currently not supported"
+                )
+            if backend_config.dynamic_shapes is not None:
+                for name, shapes in backend_config.dynamic_shapes.items():
+                    ui_option.trt_option.set_shape(name, *shapes)
         else:
             raise RuntimeError(f"Unsupported inference backend {repr(backend)}")
 
-    def _build_ui_model(self, ui_option):
-        pass
+        return ui_option
+
+    def _build_ui_runtime(self, ui_option):
+        from ultra_infer import Runtime
+
+        return Runtime(ui_option)

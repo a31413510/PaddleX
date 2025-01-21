@@ -14,9 +14,9 @@
 
 from os import PathLike
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, TypedDict, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing_extensions import TypeAlias
 
 from ...utils.flags import FLAGS_json_format_model
@@ -55,13 +55,8 @@ class ONNXRuntimeConfig(BaseModel):
 
 class TensorRTConfig(BaseModel):
     precision: Literal["FP32", "FP16"] = "FP32"
+    use_dynamic_shapes: bool = True
     dynamic_shapes: Optional[Dict[str, List[List[int]]]] = None
-
-
-class InferenceBackendConfigs(BaseModel):
-    openvino: OpenVINOConfig = Field(default_factory=OpenVINOConfig)
-    onnxruntime: ONNXRuntimeConfig = Field(default_factory=ONNXRuntimeConfig)
-    tensorrt: TensorRTConfig = Field(default_factory=TensorRTConfig)
 
 
 class MBIConfig(BaseModel):
@@ -69,8 +64,9 @@ class MBIConfig(BaseModel):
     device_id: Optional[int] = None
     auto_config: bool = True
     backend: Optional[InferenceBackend] = None
+    # TODO: Rename the field to eliminate warnings from Pydantic
     model_name: Optional[str] = None
-    backend_configs: Optional[Dict[str, Any]] = None
+    backend_config: Optional[Dict[str, Any]] = None
     # TODO: Add more validation logic here
 
 
@@ -82,17 +78,30 @@ class ModelInfo(BaseModel):
 ModelFormat: TypeAlias = Literal["PADDLE", "ONNX"]
 
 
-def get_model_formats(
+class ModelPaths(TypedDict, total=False):
+    PADDLE: Tuple[Path, Path]
+    ONNX: Path
+
+
+def get_model_paths(
     model_dir: Union[str, PathLike], model_file_prefix: str
-) -> List[ModelFormat]:
+) -> ModelPaths:
     model_dir = Path(model_dir)
-    formats: List[ModelFormat] = []
+    model_paths: ModelPaths = {}
+    pd_model_path = None
     if FLAGS_json_format_model:
         if (model_dir / f"{model_file_prefix}.json").exists():
-            formats.append("PADDLE")
+            pd_model_path = model_dir / f"{model_file_prefix}.json"
     else:
-        if (model_dir / f"{model_file_prefix}.pdmodel").exists():
-            formats.append("PADDLE")
+        if (model_dir / f"{model_file_prefix}.json").exists():
+            pd_model_path = model_dir / f"{model_file_prefix}.json"
+        elif (model_dir / f"{model_file_prefix}.pdmodel").exists():
+            pd_model_path = model_dir / f"{model_file_prefix}.pdmodel"
+    if pd_model_path and (model_dir / f"{model_file_prefix}.pdiparams").exists():
+        model_paths["PADDLE"] = (
+            pd_model_path,
+            model_dir / f"{model_file_prefix}.pdiparams",
+        )
     if (model_dir / f"{model_file_prefix}.onnx").exists():
-        formats.append("ONNX")
-    return formats
+        model_paths["ONNX"] = model_dir / f"{model_file_prefix}.onnx"
+    return model_paths

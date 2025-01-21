@@ -14,6 +14,7 @@
 
 import csv
 import functools
+import weakref
 from types import GeneratorType
 import time
 from pathlib import Path
@@ -27,7 +28,7 @@ from ...utils import logging
 
 class Benchmark(metaclass=Singleton):
     def __init__(self):
-        self._components = {}
+        self._components = weakref.WeakValueDictionary()
         self._warmup_start = None
         self._warmup_elapse = None
         self._warmup_num = None
@@ -64,7 +65,7 @@ class Benchmark(metaclass=Singleton):
         from ...utils.flags import NEW_PREDICTOR
 
         if NEW_PREDICTOR:
-            from ..new_models.base import BasePaddlePredictor
+            from ..models_new.base import BasicPredictor as BasePaddlePredictor
         else:
             from ..models.common_components.paddle_predictor import BasePaddlePredictor
 

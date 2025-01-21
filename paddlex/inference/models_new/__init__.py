@@ -82,6 +82,8 @@ def create_predictor(
     pp_option=None,
     use_hpip: bool = False,
     hpi_params: Optional[Dict[str, Any]] = None,
+    use_paddle: bool = True,
+    mbi_config=None,
     *args,
     **kwargs,
 ) -> BasePredictor:
@@ -94,7 +96,6 @@ def create_predictor(
     assert (
         model_name == config["Global"]["model_name"]
     ), f"Model name mismatch，please input the correct model dir."
-
     if use_hpip:
         return _create_hp_predictor(
             model_name=model_name,
@@ -110,7 +111,9 @@ def create_predictor(
             model_dir=model_dir,
             config=config,
             device=device,
+            use_paddle=use_paddle,
             pp_option=pp_option,
+            mbi_config=mbi_config,
             *args,
             **kwargs,
         )

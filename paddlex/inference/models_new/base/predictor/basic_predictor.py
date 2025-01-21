@@ -24,7 +24,7 @@ from .....utils.subclass_register import AutoRegisterABCMetaClass
 from ....utils.benchmark import benchmark
 from ....utils.hpi import HPIInfo, MBIConfig
 from ....utils.pp_option import PaddlePredictorOption
-from ..common import MultibackendInfer, PaddleInfer
+from ...common import MultibackendInfer, PaddleInfer
 from .base_predictor import BasePredictor
 
 
@@ -87,7 +87,7 @@ class BasicPredictor(
 
     @property
     def use_paddle(self) -> bool:
-        return self.use_paddle
+        return self._use_paddle
 
     def __call__(
         self,
@@ -214,37 +214,40 @@ class BasicPredictor(
         mbi_config: Optional[Union[Dict[str, Any], MBIConfig]],
         device: Optional[str],
     ) -> MBIConfig:
-        from_scratch = mbi_config is None
-
-        if from_scratch or device is not None:
-            device_info = self._get_device_info(device)
+        if mbi_config is None:
+            mbi_config = {}
+        elif isinstance(mbi_config, MBIConfig):
+            mbi_config = mbi_config.model_dump(exclude_unset=True)
         else:
-            device_info = None
+            mbi_config = deepcopy(mbi_config)
 
-        if from_scratch:
-            mbi_config = {
-                "device_type": device_info[0],
-                "device_id": device_info[1],
-                "model_name": self.model_name,
-            }
-        if not isinstance(mbi_config, MBIConfig):
-            mbi_config = MBIConfig.model_validate(mbi_config)
-        if not from_scratch:
-            if device is not None:
-                mbi_config = mbi_config.model_copy(
-                    update={"device_type": device_info[0], "device_id": device_info[1]},
-                    deep=True,
-                )
-            else:
-                mbi_config = mbi_config.model_copy(deep=True)
+        if device is not None or "device_type" not in mbi_config:
+            device_type, device_id = self._get_device_info(device)
+            mbi_config["device_type"] = device_type
+            if device is not None or "device_id" not in mbi_config:
+                mbi_config["device_id"] = device_id
+
+        if "model_name" not in mbi_config:
+            mbi_config["model_name"] = self.model_name
+
+        mbi_config = MBIConfig.model_validate(mbi_config)
 
         if not mbi_config.auto_config:
-            backend_configs = mbi_config.backend_configs or {}
+            backend = mbi_config.backend
+            if backend is None:
+                raise RuntimeError(
+                    "`backend` must not be None when `auto_config` is False."
+                )
+            if mbi_config.backend_config is None:
+                mbi_config.backend_config = {}
+            backend_config = mbi_config.backend_config
             hpi_info = self.get_hpi_info()
             if hpi_info is not None:
+                hpi_info = hpi_info.model_dump(exclude_unset=True)
                 if (
-                    backend_configs.get("tensorrt", {}).get("dynamic_shapes", None)
-                    is None
+                    backend == "tensorrt"
+                    and backend_config.get("use_dynamic_shapes", True)
+                    and backend_config.get("dynamic_shapes", None) is None
                 ):
                     trt_dynamic_shapes = (
                         hpi_info.get("backend_configs", {})
@@ -255,13 +258,7 @@ class BasicPredictor(
                         logging.debug(
                             "TensorRT dynamic shapes set to %s", trt_dynamic_shapes
                         )
-                        if "tensorrt" not in backend_configs:
-                            backend_configs["tensorrt"] = {}
-                        backend_configs["tensorrt"][
-                            "dynamic_shapes"
-                        ] = trt_dynamic_shapes
-            if backend_configs and mbi_config.backend_configs != backend_configs:
-                mbi_config.backend_configs = backend_configs
+                        backend_config["dynamic_shapes"] = trt_dynamic_shapes
 
         return mbi_config
 
