@@ -48,7 +48,7 @@ class DetPredictor(BasicPredictor):
         *args,
         img_size: Optional[Union[int, Tuple[int, int]]] = None,
         threshold: Optional[Union[float, dict]] = None,
-        layout_nms: bool = False,
+        layout_nms: Optional[bool] = None,
         layout_unclip_ratio: Optional[Union[float, Tuple[float, float]]] = None,
         layout_merge_bboxes_mode: Optional[str] = None,
         **kwargs,
@@ -82,21 +82,25 @@ class DetPredictor(BasicPredictor):
                 raise ValueError(
                     f"The type of `img_size` must be int or Tuple[int, int], but got {type(img_size)}."
                 )
-        
+
         if layout_unclip_ratio is not None:
             if isinstance(layout_unclip_ratio, float):
                 layout_unclip_ratio = (layout_unclip_ratio, layout_unclip_ratio)
             elif isinstance(layout_unclip_ratio, (tuple, list)):
-                assert len(layout_unclip_ratio) == 2, f"The length of `layout_unclip_ratio` should be 2."
+                assert (
+                    len(layout_unclip_ratio) == 2
+                ), f"The length of `layout_unclip_ratio` should be 2."
             else:
                 raise ValueError(
                     f"The type of `layout_unclip_ratio` must be float or Tuple[float, float], but got {type(layout_unclip_ratio)}."
                 )
-        
-        if layout_merge_bboxes_mode is not None:
-            assert layout_merge_bboxes_mode in ["union", "large", "small"], \
-                f"The value of `layout_merge_bboxes_mode` must be one of ['union', 'large', 'small'], but got {layout_merge_bboxes_mode}"
 
+        if layout_merge_bboxes_mode is not None:
+            assert layout_merge_bboxes_mode in [
+                "union",
+                "large",
+                "small",
+            ], f"The value of `layout_merge_bboxes_mode` must be one of ['union', 'large', 'small'], but got {layout_merge_bboxes_mode}"
         self.img_size = img_size
         self.threshold = threshold
         self.layout_nms = layout_nms
@@ -193,20 +197,21 @@ class DetPredictor(BasicPredictor):
         else:
             return [{"boxes": np.array(res)} for res in pred_box]
 
-    def process(self, 
-            batch_data: List[Any], 
-            threshold: Optional[Union[float, dict]] = None,
-            layout_nms: bool = False,
-            layout_unclip_ratio: Optional[Union[float, Tuple[float, float]]] = None,
-            layout_merge_bboxes_mode: Optional[str] = None,
-        ):
+    def process(
+        self,
+        batch_data: List[Any],
+        threshold: Optional[Union[float, dict]] = None,
+        layout_nms: Optional[bool] = None,
+        layout_unclip_ratio: Optional[Union[float, Tuple[float, float]]] = None,
+        layout_merge_bboxes_mode: Optional[str] = None,
+    ):
         """
         Process a batch of data through the preprocessing, inference, and postprocessing.
 
         Args:
             batch_data (List[Union[str, np.ndarray], ...]): A batch of input data (e.g., image file paths).
             threshold (Optional[float, dict], optional): The threshold for filtering out low-confidence predictions.
-            layout_nms (bool, optional): Whether to use layout-aware NMS. Defaults to False.
+            layout_nms (bool, optional): Whether to use layout-aware NMS. Defaults to None.
             layout_unclip_ratio (Optional[Union[float, Tuple[float, float]]], optional): The ratio of unclipping the bounding box.
             layout_merge_bboxes_mode (Optional[str], optional): The mode for merging bounding boxes. Defaults to None.
 
@@ -229,12 +234,13 @@ class DetPredictor(BasicPredictor):
         preds_list = self._format_output(batch_preds)
         # postprocess
         boxes = self.post_op(
-            preds_list, 
-            datas, 
-            threshold = threshold or self.threshold,
+            preds_list,
+            datas,
+            threshold=threshold or self.threshold,
             layout_nms=layout_nms or self.layout_nms,
             layout_unclip_ratio=layout_unclip_ratio or self.layout_unclip_ratio,
-            layout_merge_bboxes_mode=layout_merge_bboxes_mode or self.layout_merge_bboxes_mode
+            layout_merge_bboxes_mode=layout_merge_bboxes_mode
+            or self.layout_merge_bboxes_mode,
         )
 
         return {
@@ -322,11 +328,11 @@ class DetPredictor(BasicPredictor):
         if self.threshold is None:
             self.threshold = self.config.get("draw_threshold", 0.5)
         if not self.layout_nms:
-            self.layout_nms = self.config.get("layout_nms", False)
+            self.layout_nms = self.config.get("layout_nms", None)
         if self.layout_unclip_ratio is None:
             self.layout_unclip_ratio = self.config.get("layout_unclip_ratio", None)
         if self.layout_merge_bboxes_mode is None:
-            self.layout_merge_bboxes_mode = self.config.get("layout_merge_bboxes_mode", None)
-        return DetPostProcess(
-            labels=self.config["label_list"]
-        )
+            self.layout_merge_bboxes_mode = self.config.get(
+                "layout_merge_bboxes_mode", None
+            )
+        return DetPostProcess(labels=self.config["label_list"])

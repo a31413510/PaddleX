@@ -42,6 +42,7 @@ class BasicPredictor(
         config: Optional[Dict[str, Any]] = None,
         *,
         device: Optional[str] = None,
+        batch_size: int = 1,
         use_paddle: bool = True,
         pp_option: Optional[PaddlePredictorOption] = None,
         mbi_config: Optional[Union[Dict[str, Any], MBIConfig]] = None,
@@ -54,6 +55,8 @@ class BasicPredictor(
                 dictionary. Defaults to None.
             device (Optional[str], optional): The device to run the inference
                 engine on. Defaults to None.
+            batch_size (int, optional): The batch size to predict.
+                Defaults to 1.
             use_paddle (bool, optional): Whether to use Paddle Inference.
                 Defaults to True.
             pp_option (Optional[PaddlePredictorOption], optional): The inference
@@ -64,6 +67,7 @@ class BasicPredictor(
         """
         super().__init__(model_dir=model_dir, config=config)
 
+        self.batch_sampler.batch_size = batch_size
         self._use_paddle = use_paddle
         if use_paddle:
             self._pp_option = self._prepare_pp_option(pp_option, device)
