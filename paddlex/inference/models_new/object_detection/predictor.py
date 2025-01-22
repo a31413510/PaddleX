@@ -201,7 +201,7 @@ class DetPredictor(BasicPredictor):
         self,
         batch_data: List[Any],
         threshold: Optional[Union[float, dict]] = None,
-        layout_nms: Optional[bool] = None,
+        layout_nms: bool = False,
         layout_unclip_ratio: Optional[Union[float, Tuple[float, float]]] = None,
         layout_merge_bboxes_mode: Optional[str] = None,
     ):
@@ -219,7 +219,7 @@ class DetPredictor(BasicPredictor):
             dict: A dictionary containing the input path, raw image, class IDs, scores, and label names
                 for every instance of the batch. Keys include 'input_path', 'input_img', 'class_ids', 'scores', and 'label_names'.
         """
-        datas = batch_data
+        datas = batch_data.instances
         # preprocess
         for pre_op in self.pre_ops[:-1]:
             datas = pre_op(datas)
@@ -244,7 +244,8 @@ class DetPredictor(BasicPredictor):
         )
 
         return {
-            "input_path": [data.get("img_path", None) for data in datas],
+            "input_path": batch_data.input_paths,
+            "page_index": batch_data.page_indexes,
             "input_img": [data["ori_img"] for data in datas],
             "boxes": boxes,
         }

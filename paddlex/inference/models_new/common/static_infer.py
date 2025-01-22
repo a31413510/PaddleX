@@ -203,8 +203,6 @@ class PaddleInfer(StaticInfer):
         self._reset()
 
     def _reset(self) -> None:
-        if not self.option:
-            self.option = PaddlePredictorOption()
         logging.debug(f"Env: {self.option}")
         (
             predictor,

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from ....utils import logging
 from ....utils.func_register import FuncRegister
 from ....modules.formula_recognition.model_list import MODELS
 from ...common.batch_sampler import ImageBatchSampler
@@ -62,13 +63,25 @@ class FormulaRecPredictor(BasicPredictor):
                 pre_tfs[name] = op
         pre_tfs["ToBatch"] = ToBatch()
 
+        if self._use_paddle:
+            if self.model_name in ("LaTeX_OCR_rec") and self.pp_option.device in (
+                "cpu"
+            ):
+                import cpuinfo
+
+                if "GenuineIntel" in cpuinfo.get_cpu_info().get("vendor_id_raw", ""):
+                    self.pp_option.run_mode = "mkldnn"
+                    logging.warning(
+                        "Now, the `LaTeX_OCR_rec` model only support `mkldnn` mode when running on Intel CPU devices. So using `mkldnn` instead."
+                    )
+
         infer = self.create_static_infer()
 
         post_op = self.build_postprocess(**self.config["PostProcess"])
         return pre_tfs, infer, post_op
 
     def process(self, batch_data):
-        batch_raw_imgs = self.pre_tfs["Read"](imgs=batch_data)
+        batch_raw_imgs = self.pre_tfs["Read"](imgs=batch_data.instances)
         if self.model_name in ("LaTeX_OCR_rec"):
             batch_imgs = self.pre_tfs["MinMaxResize"](imgs=batch_raw_imgs)
             batch_imgs = self.pre_tfs["LatexTestTransform"](imgs=batch_imgs)
@@ -88,7 +101,8 @@ class FormulaRecPredictor(BasicPredictor):
         batch_preds = [p.reshape([-1]) for p in batch_preds[0]]
         rec_formula = self.post_op(batch_preds)
         return {
-            "input_path": batch_data,
+            "input_path": batch_data.input_paths,
+            "page_index": batch_data.page_indexes,
             "input_img": batch_raw_imgs,
             "rec_formula": rec_formula,
         }
