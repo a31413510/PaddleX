@@ -57,15 +57,15 @@ class TensorRTConfig(BaseModel):
     precision: Literal["FP32", "FP16"] = "FP32"
     use_dynamic_shapes: bool = True
     dynamic_shapes: Optional[Dict[str, List[List[int]]]] = None
+    # TODO: Control caching behavior
 
 
 class MBIConfig(BaseModel):
+    model_name: str
     device_type: str
     device_id: Optional[int] = None
     auto_config: bool = True
     backend: Optional[InferenceBackend] = None
-    # TODO: Rename the field to eliminate warnings from Pydantic
-    model_name: Optional[str] = None
     backend_config: Optional[Dict[str, Any]] = None
     # TODO: Add more validation logic here
 

@@ -243,11 +243,13 @@ class PaddleInfer(StaticInfer):
                     "trt_fp16": Config.Precision.Half,
                 }
                 if self.option.run_mode in precision_map.keys():
+                    cache_dir = self.model_dir / CACHE_DIR / "paddle_inference"
                     self._configure_trt(
                         config,
                         precision_map[self.option.run_mode],
                         model_file,
                         params_file,
+                        cache_dir,
                     )
 
         elif self.option.device_type == "npu":
@@ -314,8 +316,9 @@ class PaddleInfer(StaticInfer):
             output_handlers.append(output_handler)
         return predictor, input_handlers, output_handlers
 
-    def _configure_trt(self, config, precision_mode, model_file, params_file):
-        cache_dir = self.model_dir / CACHE_DIR / "paddle_inference"
+    def _configure_trt(
+        self, config, precision_mode, model_file, params_file, cache_dir
+    ):
         config.set_optim_cache_dir(str(cache_dir / "optim_cache"))
 
         config.enable_tensorrt_engine(
@@ -354,8 +357,8 @@ class PaddleInfer(StaticInfer):
                     should_collect_shape_range_info = False
                 if should_collect_shape_range_info:
                     _collect_trt_shape_range_info(
-                        model_file,
-                        params_file,
+                        str(model_file),
+                        str(params_file),
                         self.option.device_id or 0,
                         str(trt_shape_range_info_path),
                         self.option.trt_dynamic_shapes,
@@ -363,7 +366,7 @@ class PaddleInfer(StaticInfer):
                     )
                 config.enable_tuned_tensorrt_dynamic_shape(
                     str(trt_shape_range_info_path),
-                    self.option.trt_allow_build_at_runtime,
+                    self.option.trt_allow_rebuild_at_runtime,
                 )
             else:
                 if self.option.trt_dynamic_shapes is not None:
@@ -461,9 +464,9 @@ class MultibackendInfer(StaticInfer):
         elif backend == "tensorrt":
             backend_config = TensorRTConfig.model_validate(backend_config)
             ui_option.use_trt_backend()
-            ui_option.trt_option.serialize_file = str(
-                self.model_dir / CACHE_DIR / "tensorrt" / "trt_serialized.trt"
-            )
+            cache_dir = self.model_dir / CACHE_DIR / "tensorrt"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            ui_option.trt_option.serialize_file = str(cache_dir / "trt_serialized.trt")
             if backend_config.precision == "FP16":
                 ui_option.trt_option.enable_fp16 = True
             if not backend_config.use_dynamic_shapes:

@@ -178,8 +178,9 @@ class BasicPredictor(
         if pp_option is None:
             pp_option = PaddlePredictorOption(model_name=self.model_name)
         else:
-            # To avoid mutating the original input
-            pp_option = deepcopy(pp_option)
+            # FIXME: The original input might get mutated
+            if pp_option.model_name is None:
+                pp_option.model_name = self.model_name
         if device_info:
             pp_option.device_type = device_info[0]
             pp_option.device_id = device_info[1]
@@ -225,14 +226,14 @@ class BasicPredictor(
         else:
             mbi_config = deepcopy(mbi_config)
 
+        if "model_name" not in mbi_config:
+            mbi_config["model_name"] = self.model_name
+
         if device is not None or "device_type" not in mbi_config:
             device_type, device_id = self._get_device_info(device)
             mbi_config["device_type"] = device_type
             if device is not None or "device_id" not in mbi_config:
                 mbi_config["device_id"] = device_id
-
-        if "model_name" not in mbi_config:
-            mbi_config["model_name"] = self.model_name
 
         mbi_config = MBIConfig.model_validate(mbi_config)
 

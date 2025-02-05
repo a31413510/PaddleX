@@ -223,7 +223,7 @@ class BasePaddlePredictor(BaseComponent):
                                 )
                             config.enable_tuned_tensorrt_dynamic_shape(
                                 str(trt_shape_range_info_path),
-                                self.option.trt_allow_build_at_runtime,
+                                self.option.trt_allow_rebuild_at_runtime,
                             )
                         else:
                             if self.option.trt_dynamic_shapes is not None:

@@ -88,7 +88,7 @@ class PaddlePredictorOption(object):
             "trt_dynamic_shapes": None,  # only for trt
             "trt_dynamic_shape_input_data": None,  # only for trt
             "trt_shape_range_info_path": None,  # only for trt
-            "trt_allow_build_at_runtime": True,  # only for trt
+            "trt_allow_rebuild_at_runtime": True,  # only for trt
         }
 
     def _update(self, k, v):
@@ -281,12 +281,12 @@ class PaddlePredictorOption(object):
         self._update("trt_shape_range_info_path", trt_shape_range_info_path)
 
     @property
-    def trt_allow_build_at_runtime(self):
-        return self._cfg["trt_allow_build_at_runtime"]
+    def trt_allow_rebuild_at_runtime(self):
+        return self._cfg["trt_allow_rebuild_at_runtime"]
 
-    @trt_allow_build_at_runtime.setter
-    def trt_allow_build_at_runtime(self, trt_allow_build_at_runtime):
-        self._update("trt_allow_build_at_runtime", trt_allow_build_at_runtime)
+    @trt_allow_rebuild_at_runtime.setter
+    def trt_allow_rebuild_at_runtime(self, trt_allow_rebuild_at_runtime):
+        self._update("trt_allow_rebuild_at_runtime", trt_allow_rebuild_at_runtime)
 
     # For backward compatibility
     # TODO: Issue deprecation warnings
