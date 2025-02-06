@@ -75,12 +75,12 @@ class ModelInfo(BaseModel):
     hpi_info: Optional[HPIInfo] = None
 
 
-ModelFormat: TypeAlias = Literal["PADDLE", "ONNX"]
+ModelFormat: TypeAlias = Literal["paddle", "onnx"]
 
 
 class ModelPaths(TypedDict, total=False):
-    PADDLE: Tuple[Path, Path]
-    ONNX: Path
+    paddle: Tuple[Path, Path]
+    onnx: Path
 
 
 def get_model_paths(
@@ -98,10 +98,10 @@ def get_model_paths(
         elif (model_dir / f"{model_file_prefix}.pdmodel").exists():
             pd_model_path = model_dir / f"{model_file_prefix}.pdmodel"
     if pd_model_path and (model_dir / f"{model_file_prefix}.pdiparams").exists():
-        model_paths["PADDLE"] = (
+        model_paths["paddle"] = (
             pd_model_path,
             model_dir / f"{model_file_prefix}.pdiparams",
         )
     if (model_dir / f"{model_file_prefix}.onnx").exists():
-        model_paths["ONNX"] = model_dir / f"{model_file_prefix}.onnx"
+        model_paths["onnx"] = model_dir / f"{model_file_prefix}.onnx"
     return model_paths

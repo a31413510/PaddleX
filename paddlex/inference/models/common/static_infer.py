@@ -225,9 +225,9 @@ class PaddleInfer(StaticInfer):
         from lazy_paddle.inference import Config, create_predictor
 
         model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
-        if "PADDLE" not in model_paths:
-            raise RuntimeError("No valid paddle model found")
-        model_file, params_file = model_paths["PADDLE"]
+        if "paddle" not in model_paths:
+            raise RuntimeError("No valid Paddle model found")
+        model_file, params_file = model_paths["paddle"]
 
         config = Config(str(model_file), str(params_file))
 
@@ -449,9 +449,9 @@ class MultibackendInfer(StaticInfer):
 
         model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
         # XXX: The model format is hard-coded for now
-        if "ONNX" not in model_paths:
+        if "onnx" not in model_paths:
             raise RuntimeError("ONNX model is required")
-        ui_option.set_model_path(str(model_paths["ONNX"]), "", ModelFormat.ONNX)
+        ui_option.set_model_path(str(model_paths["onnx"]), "", ModelFormat.ONNX)
 
         if backend == "openvino":
             backend_config = OpenVINOConfig.model_validate(backend_config)
