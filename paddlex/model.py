@@ -84,11 +84,25 @@ class _ModelBasedConfig(_BaseModel):
         model_dir = predict_kwargs.pop("model_dir", None)
 
         device = self._config.Global.get("device")
-        kernel_option = predict_kwargs.pop("kernel_option", {})
-        kernel_option.update({"device": device})
+        use_paddle = predict_kwargs.pop("use_paddle", True)
+        kernel_option = predict_kwargs.pop("kernel_option", None)
+        mbi_config = predict_kwargs.pop("mbi_config", None)
 
-        pp_option = PaddlePredictorOption(self._model_name, **kernel_option)
-        predictor = create_predictor(self._model_name, model_dir, pp_option=pp_option)
+        create_predictor_kwargs = {}
+        if kernel_option:
+            create_predictor_kwargs["pp_option"] = PaddlePredictorOption(
+                **kernel_option
+            )
+        if mbi_config:
+            create_predictor_kwargs["mbi_config"] = mbi_config
+
+        predictor = create_predictor(
+            self._model_name,
+            model_dir,
+            device=device,
+            use_paddle=use_paddle,
+            **create_predictor_kwargs,
+        )
         assert "input" in predict_kwargs
         return predict_kwargs, predictor
 
