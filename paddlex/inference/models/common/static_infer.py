@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import abc
-from typing import Any, Dict, Union, Sequence, Tuple, List
+from typing import Union, Sequence, Tuple, List
 import lazy_paddle as paddle
 import numpy as np
 from pathlib import Path
@@ -26,6 +26,7 @@ from ...utils.hpi import (
     OpenVINOConfig,
     TensorRTConfig,
     get_model_paths,
+    suggest_inference_backend_and_config,
 )
 
 
@@ -427,13 +428,22 @@ class MultibackendInfer(StaticInfer):
         from ultra_infer import RuntimeOption, ModelFormat
 
         if self._config.auto_config:
-            raise RuntimeError("Automatic configuration is not supported yet")
-        backend = self._config.backend
-        if backend is None:
-            raise RuntimeError(
-                "When automatic configuration is not used, the inference backend must be specified manually."
-            )
-        backend_config = self._config.backend_config or {}
+            # Should we use the strategy pattern here to allow extensible
+            # strategies?
+            ret = suggest_inference_backend_and_config(self._config)
+            if ret[0] is None:
+                # Should I use a custom exception?
+                raise RuntimeError(
+                    f"No inference backend and configuration could be suggested. Reason: {ret[1]}"
+                )
+            backend, backend_config = ret
+        else:
+            backend = self._config.backend
+            if backend is None:
+                raise RuntimeError(
+                    "When automatic configuration is not used, the inference backend must be specified manually."
+                )
+            backend_config = self._config.backend_config or {}
 
         if ui_option is None:
             ui_option = RuntimeOption()
@@ -462,6 +472,17 @@ class MultibackendInfer(StaticInfer):
             ui_option.use_ort_backend()
             ui_option.set_cpu_thread_num(backend_config.cpu_num_threads)
         elif backend == "tensorrt":
+            if (
+                backend_config.get("use_dynamic_shapes", True)
+                and backend_config.get("dynamic_shapes", None) is None
+            ):
+                trt_info = self._config.hpi_info.backend_configs.tensorrt
+                if trt_info is not None and trt_info.dynamic_shapes is not None:
+                    trt_dynamic_shapes = trt_info.dynamic_shapes
+                    logging.debug(
+                        "TensorRT dynamic shapes set to %s", trt_dynamic_shapes
+                    )
+                    backend_config["dynamic_shapes"] = trt_dynamic_shapes
             backend_config = TensorRTConfig.model_validate(backend_config)
             ui_option.use_trt_backend()
             cache_dir = self.model_dir / CACHE_DIR / "tensorrt"
@@ -478,6 +499,9 @@ class MultibackendInfer(StaticInfer):
                     ui_option.trt_option.set_shape(name, *shapes)
         else:
             raise RuntimeError(f"Unsupported inference backend {repr(backend)}")
+
+        logging.info("Inference backend: %s", backend)
+        logging.info("Inference backend config: %s", backend_config)
 
         return ui_option
 

@@ -28,7 +28,6 @@ premailer
 PyMuPDF
 ujson
 Pillow
-importlib_resources>=6.4
 pydantic>=2
 typing_extensions>=4.11
 ######## For Chatocrv3 #######

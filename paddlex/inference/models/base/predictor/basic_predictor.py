@@ -235,35 +235,12 @@ class BasicPredictor(
             if device is not None or "device_id" not in mbi_config:
                 mbi_config["device_id"] = device_id
 
-        mbi_config = MBIConfig.model_validate(mbi_config)
-
-        if not mbi_config.auto_config:
-            backend = mbi_config.backend
-            if backend is None:
-                raise RuntimeError(
-                    "`backend` must not be None when `auto_config` is False."
-                )
-            if mbi_config.backend_config is None:
-                mbi_config.backend_config = {}
-            backend_config = mbi_config.backend_config
+        if "hpi_info" not in mbi_config:
             hpi_info = self.get_hpi_info()
             if hpi_info is not None:
-                hpi_info = hpi_info.model_dump(exclude_unset=True)
-                if (
-                    backend == "tensorrt"
-                    and backend_config.get("use_dynamic_shapes", True)
-                    and backend_config.get("dynamic_shapes", None) is None
-                ):
-                    trt_dynamic_shapes = (
-                        hpi_info.get("backend_configs", {})
-                        .get("tensorrt", {})
-                        .get("dynamic_shapes", None)
-                    )
-                    if trt_dynamic_shapes is not None:
-                        logging.debug(
-                            "TensorRT dynamic shapes set to %s", trt_dynamic_shapes
-                        )
-                        backend_config["dynamic_shapes"] = trt_dynamic_shapes
+                mbi_config["hpi_info"] = hpi_info
+
+        mbi_config = MBIConfig.model_validate(mbi_config)
 
         return mbi_config
 

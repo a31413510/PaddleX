@@ -14,12 +14,11 @@
 
 import os
 import argparse
+import importlib.resources
 import subprocess
 import sys
 import shutil
 from pathlib import Path
-
-from importlib_resources import files, as_file
 
 from . import create_pipeline
 from .inference.pipelines import load_pipeline_config
@@ -196,14 +195,16 @@ def install(args):
     """install paddlex"""
 
     def _install_serving_deps():
-        with as_file(files("paddlex").joinpath("serving_requirements.txt")) as req_file:
+        with importlib.resources.path(
+            "paddlex", "serving_requirements.txt"
+        ) as req_file:
             return subprocess.check_call(
                 [sys.executable, "-m", "pip", "install", "-r", str(req_file)]
             )
 
     def _install_paddle2onnx_deps():
-        with as_file(
-            files("paddlex").joinpath("paddle2onnx_requirements.txt")
+        with importlib.resources.path(
+            "paddlex", "paddle2onnx_requirements.txt"
         ) as req_file:
             return subprocess.check_call(
                 [sys.executable, "-m", "pip", "install", "-r", str(req_file)]
