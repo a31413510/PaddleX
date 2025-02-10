@@ -22,7 +22,7 @@ import numpy as np
 import cv2
 import PIL
 from PIL import Image, ImageDraw, ImageFont
-from ....utils.fonts import PINGFANG_FONT_FILE_PATH, create_font
+from ....utils.fonts import SIMFANG_FONT_FILE_PATH, create_font
 from ...common.result import BaseCVResult, StrMixin, JsonMixin
 
 
@@ -105,7 +105,7 @@ class OCRResult(BaseCVResult):
                     box[2:, 1] = np.mean(box[:, 1]) + min(20, height)
                 draw_left.polygon(box, fill=color)
                 img_right_text = draw_box_txt_fine(
-                    (w, h), box, txt, PINGFANG_FONT_FILE_PATH
+                    (w, h), box, txt, SIMFANG_FONT_FILE_PATH
                 )
                 pts = np.array(box, np.int32).reshape((-1, 1, 2))
                 cv2.polylines(img_right_text, [pts], True, color, 1)
@@ -140,16 +140,26 @@ class OCRResult(BaseCVResult):
         data["model_settings"] = self["model_settings"]
         if self["model_settings"]["use_doc_preprocessor"]:
             data["doc_preprocessor_res"] = self["doc_preprocessor_res"].str["res"]
-        data["dt_polys"] = self["dt_polys"]
+        data["dt_polys"] = (
+            self["dt_polys"]
+            if self["text_type"] == "seal"
+            else np.array(self["dt_polys"])
+        )
         data["text_det_params"] = self["text_det_params"]
         data["text_type"] = self["text_type"]
         if "textline_orientation_angles" in self:
-            data["textline_orientation_angles"] = self["textline_orientation_angles"]
+            data["textline_orientation_angles"] = np.array(
+                self["textline_orientation_angles"]
+            )
         data["text_rec_score_thresh"] = self["text_rec_score_thresh"]
         data["rec_texts"] = self["rec_texts"]
-        data["rec_scores"] = self["rec_scores"]
-        data["rec_polys"] = self["rec_polys"]
-        data["rec_boxes"] = self["rec_boxes"]
+        data["rec_scores"] = np.array(self["rec_scores"])
+        data["rec_polys"] = (
+            self["rec_polys"]
+            if self["text_type"] == "seal"
+            else np.array(self["rec_polys"])
+        )
+        data["rec_boxes"] = np.array(self["rec_boxes"])
 
         return JsonMixin._to_str(data, *args, **kwargs)
 

@@ -14,7 +14,7 @@
 
 from paddlex import create_pipeline
 
-pipeline = create_pipeline(pipeline_name="layout_parsing_v2")
+pipeline = create_pipeline(pipeline="layout_parsing_v2")
 
 output = pipeline.predict(
     "./test_samples/demo_paper.png",
@@ -32,4 +32,3 @@ for res in output:
     res.save_to_xlsx("./output")
     res.save_to_html("./output")
     res.save_to_markdown("./output")
-    res.save_to_pdf_order("./output")

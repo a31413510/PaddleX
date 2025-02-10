@@ -27,7 +27,7 @@ The text recognition module is the core component of an OCR (Optical Character R
 <td>PP-OCRv4_server_rec_doc is trained on a mixed dataset of more Chinese document data and PP-OCR training data based on PP-OCRv4_server_rec. It has added the ability to recognize some traditional Chinese characters, Japanese, and special characters, and can support the recognition of more than 15,000 characters. In addition to improving the text recognition capability related to documents, it also enhances the general text recognition capability.</td>
 </tr>
 <tr>
-<td>PP-OCRv4_mobile_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/PP-OCRv4_mobile_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-OCRv4_mobile_rec_pretrained.pdparams">Training Model</a></td>
+<td>PP-OCRv4_mobile_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/PP-OCRv4_mobile_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-OCRv4_mobile_rec_pretrained.pdparams">Training Model</a></td>
 <td>78.20</td>
 <td>7.95018</td>
 <td>46.7868</td>
@@ -35,7 +35,7 @@ The text recognition module is the core component of an OCR (Optical Character R
 <td>The PP-OCRv4 recognition model is further upgraded based on PP-OCRv3. Under comparable speed conditions, the effect in Chinese and English scenarios is further improved, and the average recognition accuracy of the 80-language multilingual model is increased by more than 8%.</td>
 </tr>
 <tr>
-<td>PP-OCRv4_server_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/PP-OCRv4_server_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-OCRv4_server_rec_pretrained.pdparams">Training Model</a></td>
+<td>PP-OCRv4_server_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/PP-OCRv4_server_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-OCRv4_server_rec_pretrained.pdparams">Training Model</a></td>
 <td>79.20</td>
 <td>7.19439</td>
 <td>140.179</td>
@@ -78,7 +78,7 @@ The text recognition module is the core component of an OCR (Optical Character R
 <td>PP-OCRv4_server_rec_doc is trained on a mixed dataset of more Chinese document data and PP-OCR training data based on PP-OCRv4_server_rec. It has added the recognition capabilities for some traditional Chinese characters, Japanese, and special characters. The number of recognizable characters is over 15,000. In addition to the improvement in document-related text recognition, it also enhances the general text recognition capability.</td>
 </tr>
 <tr>
-<td>PP-OCRv4_mobile_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/PP-OCRv4_mobile_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-OCRv4_mobile_rec_pretrained.pdparams">Training Model</a></td>
+<td>PP-OCRv4_mobile_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/PP-OCRv4_mobile_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-OCRv4_mobile_rec_pretrained.pdparams">Training Model</a></td>
 <td>78.20</td>
 <td>7.95018</td>
 <td>46.7868</td>
@@ -86,7 +86,7 @@ The text recognition module is the core component of an OCR (Optical Character R
 <td>The PP-OCRv4 recognition model is an upgrade from PP-OCRv3. Under comparable speed conditions, the effect in Chinese and English scenarios is further improved. The average recognition accuracy of the 80 multilingual models is increased by more than 8%.</td>
 </tr>
 <tr>
-<td>PP-OCRv4_server_rec </td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/PP-OCRv4_server_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-OCRv4_server_rec_pretrained.pdparams">Trained Model</a></td>
+<td>PP-OCRv4_server_rec </td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/PP-OCRv4_server_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-OCRv4_server_rec_pretrained.pdparams">Trained Model</a></td>
 <td>79.20</td>
 <td>7.19439</td>
 <td>140.179</td>
@@ -115,7 +115,7 @@ The text recognition module is the core component of an OCR (Optical Character R
 <th>Introduction</th>
 </tr>
 <tr>
-<td>ch_SVTRv2_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/ch_SVTRv2_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/ch_SVTRv2_rec_pretrained.pdparams">Training Model</a></td>
+<td>ch_SVTRv2_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/ch_SVTRv2_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/ch_SVTRv2_rec_pretrained.pdparams">Training Model</a></td>
 <td>68.81</td>
 <td>8.36801</td>
 <td>165.706</td>
@@ -137,7 +137,7 @@ SVTRv2 is a server text recognition model developed by the OpenOCR team of Fudan
 <th>Introduction</th>
 </tr>
 <tr>
-<td>ch_RepSVTR_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/ch_RepSVTR_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/ch_RepSVTR_rec_pretrained.pdparams">Training Model</a></td>
+<td>ch_RepSVTR_rec</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/ch_RepSVTR_rec_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/ch_RepSVTR_rec_pretrained.pdparams">Training Model</a></td>
 <td>65.07</td>
 <td>10.5047</td>
 <td>51.5647</td>
@@ -290,8 +290,13 @@ For more information on using PaddleX's single-model inference APIs, please refe
 
 After running, the result obtained is:
 ```bash
-{'input_path': 'general_ocr_rec_001.png', 'rec_text': 'Oasis Shigewei Garden Apartment', 'rec_score': 0.9875298738479614}
+{'res': {'input_path': 'general_ocr_rec_001.png', 'page_index': None, 'rec_text': '绿洲仕格维花园公寓', 'rec_score': 0.9875497817993164}}
 ````
+The meanings of the running results parameters are as follows:
+- `input_path`：Represents the path to the image of the text line to be predicted.
+- `page_index`：If the input is a PDF file, this indicates the current page number of the PDF. Otherwise, it is `None`
+- `rec_text`：Represents the predicted text of the text line image.
+- `rec_score`：Represents the confidence score of the predicted text line image.
 
 The visualized image is as follows:
 
@@ -314,14 +319,13 @@ In the above Python script, the following steps are executed:
 <tr>
 <td><code>x</code></td>
 <td>Data to be predicted, supporting multiple input types</td>
-<td><code>Python Var</code>/<code>str</code>/<code>dict</code>/<code>list</code></td>
+<td><code>Python Var</code>/<code>str</code>/<code>list</code></td>
 <td>
 <ul>
   <li><b>Python variable</b>, such as image data represented by <code>numpy.ndarray</code></li>
   <li><b>File path</b>, such as the local path of an image file: <code>/root/data/img.jpg</code></li>
   <li><b>URL link</b>, such as the network URL of an image file: <a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_ocr_001.png">Example</a></li>
   <li><b>Local directory</b>, this directory should contain the data files to be predicted, such as the local path: <code>/root/data/</code></li>
-  <li><b>Dictionary</b>, the <code>key</code> of the dictionary should correspond to the specific task, such as <code>"img"</code> for image classification tasks. The <code>value</code> of the dictionary supports the above types of data, for example: <code>{"img": "/root/data1"}</code></li>
   <li><b>List</b>, the elements of the list should be the above types of data, such as <code>[numpy.ndarray, numpy.ndarray]</code>, <code>["/root/data/img1.jpg", "/root/data/img2.jpg"]</code>, <code>["/root/data1", "/root/data2"]</code>, <code>[{"img": "/root/data1"}, {"img": "/root/data2/img.jpg"}]</code></li>
 </ul>
 </td>
@@ -455,29 +459,48 @@ After executing the above command, PaddleX will validate the dataset and summari
 <details><summary>👉 <b>Validation Result Details (Click to Expand)</b></summary>
 
 <p>The specific content of the validation result file is:</p>
-<pre><code class="language-bash">{
-  &quot;done_flag&quot;: true,
-  &quot;check_pass&quot;: true,
-  &quot;attributes&quot;: {
-    &quot;train_samples&quot;: 4468,
-    &quot;train_sample_paths&quot;: [
-      &quot;../dataset/ocr_rec_dataset_examples/images/train_word_1.png&quot;,
-      &quot;../dataset/ocr_rec_dataset_examples/images/train_word_10.png&quot;
+
+<pre><code class="language-bash">
+{
+  "done_flag": true,
+  "check_pass": true,
+  "attributes": {
+    "train_samples": 4468,
+    "train_sample_paths": [
+      "check_dataset\/demo_img\/train_word_1.png",
+      "check_dataset\/demo_img\/train_word_2.png",
+      "check_dataset\/demo_img\/train_word_3.png",
+      "check_dataset\/demo_img\/train_word_4.png",
+      "check_dataset\/demo_img\/train_word_5.png",
+      "check_dataset\/demo_img\/train_word_6.png",
+      "check_dataset\/demo_img\/train_word_7.png",
+      "check_dataset\/demo_img\/train_word_8.png",
+      "check_dataset\/demo_img\/train_word_9.png",
+      "check_dataset\/demo_img\/train_word_10.png"
     ],
-    &quot;val_samples&quot;: 2077,
-    &quot;val_sample_paths&quot;: [
-      &quot;../dataset/ocr_rec_dataset_examples/images/val_word_1.png&quot;,
-      &quot;../dataset/ocr_rec_dataset_examples/images/val_word_10.png&quot;
+    "val_samples": 2077,
+    "val_sample_paths": [
+      "check_dataset\/demo_img\/val_word_1.png",
+      "check_dataset\/demo_img\/val_word_2.png",
+      "check_dataset\/demo_img\/val_word_3.png",
+      "check_dataset\/demo_img\/val_word_4.png",
+      "check_dataset\/demo_img\/val_word_5.png",
+      "check_dataset\/demo_img\/val_word_6.png",
+      "check_dataset\/demo_img\/val_word_7.png",
+      "check_dataset\/demo_img\/val_word_8.png",
+      "check_dataset\/demo_img\/val_word_9.png",
+      "check_dataset\/demo_img\/val_word_10.png"
     ]
   },
-  &quot;analysis&quot;: {
-    &quot;histogram&quot;: &quot;check_dataset/histogram.png&quot;
+  "analysis": {
+    "histogram": "check_dataset\/histogram.png"
   },
-  &quot;dataset_path&quot;: &quot;./dataset/ocr_rec_dataset_examples&quot;,
-  &quot;show_type&quot;: &quot;image&quot;,
-  &quot;dataset_type&quot;: &quot;MSTextRecDataset&quot;
+  "dataset_path": "ocr_rec_dataset_examples",
+  "show_type": "image",
+  "dataset_type": "MSTextRecDataset"
 }
 </code></pre>
+
 <p>In the above validation result, <code>check_pass</code> being <code>true</code> indicates that the dataset format meets the requirements. Explanations for other indicators are as follows:</p>
 <ul>
 <li><code>attributes.train_samples</code>: The number of training set samples in this dataset is 4468;</li>

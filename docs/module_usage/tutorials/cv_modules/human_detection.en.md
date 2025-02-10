@@ -21,7 +21,7 @@ Human detection is a subtask of object detection, which utilizes computer vision
 <th>Description</th>
 </tr>
 <tr>
-<td>PP-YOLOE-L_human</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/PP-YOLOE-L_human_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-YOLOE-L_human_pretrained.pdparams">Trained Model</a></td>
+<td>PP-YOLOE-L_human</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/PP-YOLOE-L_human_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-YOLOE-L_human_pretrained.pdparams">Trained Model</a></td>
 <td>48.0</td>
 <td>81.9</td>
 <td>32.8</td>
@@ -30,7 +30,7 @@ Human detection is a subtask of object detection, which utilizes computer vision
 <td rowspan="2">Human detection model based on PP-YOLOE</td>
 </tr>
 <tr>
-<td>PP-YOLOE-S_human</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/PP-YOLOE-S_human_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-YOLOE-S_human_pretrained.pdparams">Trained Model</a></td>
+<td>PP-YOLOE-S_human</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/PP-YOLOE-S_human_infer.tar">Inference Model</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-YOLOE-S_human_pretrained.pdparams">Trained Model</a></td>
 <td>42.5</td>
 <td>77.9</td>
 <td>15.0</td>
@@ -62,11 +62,12 @@ for res in output:
 
 After running, the result obtained is:
 ```bash
-{'res': "{'input_path': 'human_detection.jpg', 'boxes': [{'cls_id': 0, 'label': 'pedestrian', 'score': 0.9085694551467896, 'coordinate': [259.53326, 342.86493, 307.43408, 464.22394]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8818504810333252, 'coordinate': [170.22249, 317.11432, 260.24777, 470.12704]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8622929453849792, 'coordinate': [402.17957, 345.1815, 458.4271, 479.91724]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8577917218208313, 'coordinate': [522.5973, 360.11118, 614.3201, 480]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8485967516899109, 'coordinate': [25.010237, 338.83722, 57.340042, 426.11932]}, ... ]}"}
+{'res': "{'input_path': 'human_detection.jpg', 'page_index': None, 'boxes': [{'cls_id': 0, 'label': 'pedestrian', 'score': 0.9085694551467896, 'coordinate': [259.53326, 342.86493, 307.43408, 464.22394]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8818504810333252, 'coordinate': [170.22249, 317.11432, 260.24777, 470.12704]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8622929453849792, 'coordinate': [402.17957, 345.1815, 458.4271, 479.91724]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8577917218208313, 'coordinate': [522.5973, 360.11118, 614.3201, 480]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8485967516899109, 'coordinate': [25.010237, 338.83722, 57.340042, 426.11932]}, ... ]}"}
 ```
 
 The meanings of the parameters in the running results are as follows:
 - `input_path`: The path of the input image to be predicted.
+- `page_index`: If the input is a PDF file, it represents the current page number of the PDF; otherwise, it is `None`.
 - `boxes`: Information of each detected object.
   - `cls_id`: Class ID.
   - `label`: Class name.
@@ -133,7 +134,7 @@ The explanations for the methods, parameters, etc., are as follows:
 <tr>
 <td><code>input</code></td>
 <td>Data to be predicted, supporting multiple input types</td>
-<td><code>Python Var</code>/<code>str</code>/<code>dict</code>/<code>list</code></td>
+<td><code>Python Var</code>/<code>str</code>/<code>list</code></td>
 <td>
 <ul>
   <li><b>Python variable</b>, such as image data represented by <code>numpy.ndarray</code></li>
@@ -301,7 +302,7 @@ After executing the above command, PaddleX will validate the dataset and collect
   &quot;analysis&quot;: {
     &quot;histogram&quot;: &quot;check_dataset/histogram.png&quot;
   },
-  &quot;dataset_path&quot;: &quot;./dataset/example_data/widerperson_coco_examples&quot;,
+  &quot;dataset_path&quot;: &quot;widerperson_coco_examples&quot;,
   &quot;show_type&quot;: &quot;image&quot;,
   &quot;dataset_type&quot;: &quot;COCODetDataset&quot;
 }

@@ -20,7 +20,7 @@ comments: true
 <th>介绍</th>
 </tr>
 <tr>
-<td>PP-YOLOE-L_human</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/PP-YOLOE-L_human_infer.tar">推理模型</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-YOLOE-L_human_pretrained.pdparams">训练模型</a></td>
+<td>PP-YOLOE-L_human</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/PP-YOLOE-L_human_infer.tar">推理模型</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-YOLOE-L_human_pretrained.pdparams">训练模型</a></td>
 <td>48.0</td>
 <td>81.9</td>
 <td>32.8</td>
@@ -29,7 +29,7 @@ comments: true
 <td rowspan="2">基于PP-YOLOE的行人检测模型</td>
 </tr>
 <tr>
-<td>PP-YOLOE-S_human</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/PP-YOLOE-S_human_infer.tar">推理模型</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-YOLOE-S_human_pretrained.pdparams">训练模型</a></td>
+<td>PP-YOLOE-S_human</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/PP-YOLOE-S_human_infer.tar">推理模型</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-YOLOE-S_human_pretrained.pdparams">训练模型</a></td>
 <td>42.5</td>
 <td>77.9</td>
 <td>15.0</td>
@@ -58,10 +58,11 @@ for res in output:
 
 运行后，得到的结果为：
 ```bash
-{'res': "{'input_path': 'human_detection.jpg', 'boxes': [{'cls_id': 0, 'label': 'pedestrian', 'score': 0.9085694551467896, 'coordinate': [259.53326, 342.86493, 307.43408, 464.22394]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8818504810333252, 'coordinate': [170.22249, 317.11432, 260.24777, 470.12704]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8622929453849792, 'coordinate': [402.17957, 345.1815, 458.4271, 479.91724]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8577917218208313, 'coordinate': [522.5973, 360.11118, 614.3201, 480]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8485967516899109, 'coordinate': [25.010237, 338.83722, 57.340042, 426.11932]}, ... ]}"}
+{'res': "{'input_path': 'human_detection.jpg', 'page_index': None, 'boxes': [{'cls_id': 0, 'label': 'pedestrian', 'score': 0.9085694551467896, 'coordinate': [259.53326, 342.86493, 307.43408, 464.22394]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8818504810333252, 'coordinate': [170.22249, 317.11432, 260.24777, 470.12704]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8622929453849792, 'coordinate': [402.17957, 345.1815, 458.4271, 479.91724]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8577917218208313, 'coordinate': [522.5973, 360.11118, 614.3201, 480]}, {'cls_id': 0, 'label': 'pedestrian', 'score': 0.8485967516899109, 'coordinate': [25.010237, 338.83722, 57.340042, 426.11932]}, ... ]}"}
 ```
 运行结果参数含义如下：
 - `input_path`: 表示输入待预测图像的路径
+- `page_index`: 如果输入是PDF文件，则表示当前是PDF的第几页，否则为 `None`
 - `boxes`: 每个预测出的object的信息
   - `cls_id`: 类别ID
   - `label`: 类别名称
@@ -128,7 +129,7 @@ for res in output:
 <tr>
 <td><code>input</code></td>
 <td>待预测数据，支持多种输入类型</td>
-<td><code>Python Var</code>/<code>str</code>/<code>dict</code>/<code>list</code></td>
+<td><code>Python Var</code>/<code>str</code>/<code>list</code></td>
 <td>
 <ul>
   <li><b>Python变量</b>，如<code>numpy.ndarray</code>表示的图像数据</li>
@@ -162,7 +163,7 @@ for res in output:
 </tr>
 </table>
 
-* 对预测结果进行处理，每个样本的预测结果均为`dict`类型，且支持打印、保存为图片、保存为`json`文件的操作:
+* 对预测结果进行处理，每个样本的预测结果均为对应的Result对象，且支持打印、保存为图片、保存为`json`文件的操作:
 
 <table>
 <thead>
@@ -297,7 +298,7 @@ python main.py -c paddlex/configs/modules/human_detection/PP-YOLOE-S_human.yaml 
   &quot;analysis&quot;: {
     &quot;histogram&quot;: &quot;check_dataset/histogram.png&quot;
   },
-  &quot;dataset_path&quot;: &quot;./dataset/example_data/widerperson_coco_examples&quot;,
+  &quot;dataset_path&quot;: &quot;widerperson_coco_examples&quot;,
   &quot;show_type&quot;: &quot;image&quot;,
   &quot;dataset_type&quot;: &quot;COCODetDataset&quot;
 }

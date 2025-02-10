@@ -21,7 +21,7 @@ comments: true
 <th>介绍</th>
 </tr>
 <tr>
-<td>PP-ShiTuV2_det</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0b2/PP-ShiTuV2_det_infer.tar">推理模型</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-ShiTuV2_det_pretrained.pdparams">训练模型</a></td>
+<td>PP-ShiTuV2_det</td><td><a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0rc0/PP-ShiTuV2_det_infer.tar">推理模型</a>/<a href="https://paddle-model-ecology.bj.bcebos.com/paddlex/official_pretrained_model/PP-ShiTuV2_det_pretrained.pdparams">训练模型</a></td>
 <td>41.5</td>
 <td>62.0</td>
 <td>33.7</td>
@@ -50,10 +50,11 @@ for res in output:
 
 运行后，得到的结果为：
 ```bash
-{'res': "{'input_path': 'general_object_detection_002.png', 'boxes': [{'cls_id': 0, 'label': 'mainbody', 'score': 0.8161919713020325, 'coordinate': [76.07117, 272.83017, 329.5627, 519.48236]}, {'cls_id': 0, 'label': 'mainbody', 'score': 0.8071584701538086, 'coordinate': [662.7539, 92.804276, 874.7139, 308.21216]}, {'cls_id': 0, 'label': 'mainbody', 'score': 0.754974365234375, 'coordinate': [284.4833, 93.76895, 476.6789, 297.27588]}, {'cls_id': 0, 'label': 'mainbody', 'score': 0.6657832860946655, 'coordinate': [732.1591, 0, 1035.9547, 168.45923]}, {'cls_id': 0, 'label': 'mainbody', 'score': 0.614763081073761, 'coordinate': [763.9127, 280.74258, 925.48065, 439.444]}, ... ]}"}
+{'res': "{'input_path': 'general_object_detection_002.png', 'page_index': None, 'boxes': [{'cls_id': 0, 'label': 'mainbody', 'score': 0.8161919713020325, 'coordinate': [76.07117, 272.83017, 329.5627, 519.48236]}, {'cls_id': 0, 'label': 'mainbody', 'score': 0.8071584701538086, 'coordinate': [662.7539, 92.804276, 874.7139, 308.21216]}, {'cls_id': 0, 'label': 'mainbody', 'score': 0.754974365234375, 'coordinate': [284.4833, 93.76895, 476.6789, 297.27588]}, {'cls_id': 0, 'label': 'mainbody', 'score': 0.6657832860946655, 'coordinate': [732.1591, 0, 1035.9547, 168.45923]}, {'cls_id': 0, 'label': 'mainbody', 'score': 0.614763081073761, 'coordinate': [763.9127, 280.74258, 925.48065, 439.444]}, ... ]}"}
 ```
 运行结果参数含义如下：
 - `input_path`: 表示输入待预测图像的路径
+- `page_index`: 如果输入是PDF文件，则表示当前是PDF的第几页，否则为 `None`
 - `boxes`: 每个预测出的object的信息
   - `cls_id`: 类别ID
   - `label`: 类别名称
@@ -121,7 +122,7 @@ for res in output:
 <tr>
 <td><code>input</code></td>
 <td>待预测数据，支持多种输入类型</td>
-<td><code>Python Var</code>/<code>str</code>/<code>dict</code>/<code>list</code></td>
+<td><code>Python Var</code>/<code>str</code>/<code>list</code></td>
 <td>
 <ul>
   <li><b>Python变量</b>，如<code>numpy.ndarray</code>表示的图像数据</li>
@@ -155,7 +156,7 @@ for res in output:
 </tr>
 </table>
 
-* 对预测结果进行处理，每个样本的预测结果均为`dict`类型，且支持打印、保存为图片、保存为`json`文件的操作:
+* 对预测结果进行处理，每个样本的预测结果均为对应的Result对象，且支持打印、保存为图片、保存为`json`文件的操作:
 
 <table>
 <thead>
@@ -288,7 +289,7 @@ python main.py -c paddlex/configs/modules/mainbody_detection/PP-ShiTuV2_det.yaml
   &quot;analysis&quot;: {
     &quot;histogram&quot;: &quot;check_dataset/histogram.png&quot;
   },
-  &quot;dataset_path&quot;: &quot;./dataset/example_data/mainbody_det_examples&quot;,
+  &quot;dataset_path&quot;: &quot;mainbody_det_examples&quot;,
   &quot;show_type&quot;: &quot;image&quot;,
   &quot;dataset_type&quot;: &quot;COCODetDataset&quot;
 }

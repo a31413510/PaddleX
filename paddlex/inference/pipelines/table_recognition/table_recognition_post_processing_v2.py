@@ -32,8 +32,10 @@ def get_ori_image_coordinate(x: int, y: int, box_list: list) -> list:
     """
     if not box_list:
         return box_list
-    offset = np.array([x, y] * 2)
+    offset = np.array([x, y] * 4)
     box_list = np.array(box_list)
+    if box_list.shape[-1] == 2:
+        offset = offset.reshape(4, 2)
     ori_box_list = offset + box_list
     return ori_box_list
 
@@ -154,7 +156,6 @@ def match_table_and_ocr(cell_box_list: list, ocr_dt_boxes: list) -> dict:
             matched[distances.index(sorted_distances[0])].append(i)
     return matched
 
-
 def get_html_result(
     matched_index: dict, ocr_contents: dict, pred_structures: list
 ) -> str:
@@ -179,6 +180,8 @@ def get_html_result(
             if "<td></td>" == tag:
                 pred_html.extend("<td>")
             if td_index in matched_index.keys():
+                if len(matched_index[td_index])==0:
+                    continue
                 b_with = False
                 if (
                     "<b>" in ocr_contents[matched_index[td_index][0]]
@@ -216,10 +219,9 @@ def get_html_result(
     html += "".join(end_structure)
     return html
 
-
 def sort_table_cells_boxes(boxes):
     """
-    Sort the input list of bounding boxes by using the DBSCAN algorithm to cluster based on the top-left y-coordinate (y1), and then sort within each line from left to right based on the top-left x-coordinate (x1).
+    Sort the input list of bounding boxes.
 
     Args:
         boxes (list of lists): The input list of bounding boxes, where each bounding box is formatted as [x1, y1, x2, y2].
@@ -227,41 +229,69 @@ def sort_table_cells_boxes(boxes):
     Returns:
         sorted_boxes (list of lists): The list of bounding boxes sorted.
     """
-    import numpy as np
-    from sklearn.cluster import DBSCAN
 
-    # Extract the top-left y-coordinates (y1)
-    y1_coords = np.array([box[1] for box in boxes])
-    y1_coords = y1_coords.reshape(-1, 1)  # Convert to a 2D array
-
-    # Choose an appropriate eps parameter based on the range of y-values
-    y_range = y1_coords.max() - y1_coords.min()
-    eps = y_range / 50  # Adjust the denominator as needed
-
-    # Perform clustering using DBSCAN
-    db = DBSCAN(eps=eps, min_samples=1).fit(y1_coords)
-    labels = db.labels_
-
-    # Group bounding boxes by their labels
-    clusters = {}
-    for label, box in zip(labels, boxes):
-        if label not in clusters:
-            clusters[label] = []
-        clusters[label].append(box)
-
-    # Sort rows based on y-coordinates
-    # Compute the average y1 value for each row and sort from top to bottom
-    sorted_rows = sorted(
-        clusters.items(), key=lambda item: np.mean([box[1] for box in item[1]])
-    )
-
-    # Within each row, sort by x1 coordinate
-    sorted_boxes = []
-    for label, row in sorted_rows:
-        row_sorted = sorted(row, key=lambda x: x[0])
-        sorted_boxes.extend(row_sorted)
-
+    boxes_sorted_by_y = sorted(boxes, key=lambda box: box[1])
+    rows = []
+    current_row = []
+    current_y = None
+    tolerance = 10
+    for box in boxes_sorted_by_y:
+        x1, y1, x2, y2 = box
+        if current_y is None:
+            current_row.append(box)
+            current_y = y1
+        else:
+            if abs(y1 - current_y) <= tolerance:
+                current_row.append(box)
+            else:
+                current_row.sort(key=lambda x: x[0])
+                rows.append(current_row)
+                current_row = [box]
+                current_y = y1
+    if current_row:
+        current_row.sort(key=lambda x: x[0])
+        rows.append(current_row)
+    sorted_boxes = [box for row in rows for box in row] 
     return sorted_boxes
+
+def convert_to_four_point_coordinates(boxes):
+    """
+    Convert bounding boxes from [x1, y1, x2, y2] format to 
+    [x1, y1, x2, y1, x2, y2, x1, y2] format.
+
+    Parameters:
+    - boxes: A list of bounding boxes, each defined as a list of integers 
+             in the format [x1, y1, x2, y2].
+
+    Returns:
+    - A list of bounding boxes, each converted to the format 
+      [x1, y1, x2, y1, x2, y2, x1, y2].
+    """
+    # Initialize an empty list to store the converted bounding boxes
+    converted_boxes = []
+
+    # Loop over each box in the input list
+    for box in boxes:
+        x1, y1, x2, y2 = box
+        
+        # Define the four corner points
+        top_left = (x1, y1)
+        top_right = (x2, y1)
+        bottom_right = (x2, y2)
+        bottom_left = (x1, y2)
+
+        # Create a new list for the converted box
+        converted_box = [
+            top_left[0], top_left[1],  # Top-left corner
+            top_right[0], top_right[1],  # Top-right corner
+            bottom_right[0], bottom_right[1],  # Bottom-right corner
+            bottom_left[0], bottom_left[1]   # Bottom-left corner
+        ]
+
+        # Append the converted box to the list
+        converted_boxes.append(converted_box)
+
+    return converted_boxes
 
 
 def get_table_recognition_res(
@@ -282,13 +312,16 @@ def get_table_recognition_res(
     Returns:
         SingleTableRecognitionResult: An object containing the single table recognition result.
     """
+
+    table_cells_result = convert_to_four_point_coordinates(table_cells_result)
+
     table_box = np.array([table_box])
     table_ocr_pred = get_sub_regions_ocr_res(overall_ocr_res, table_box)
 
     crop_start_point = [table_box[0][0], table_box[0][1]]
     img_shape = overall_ocr_res["doc_preprocessor_res"]["output_img"].shape[0:2]
 
-    ori_table_cells = convert_table_structure_pred_bbox(
+    table_cells_result = convert_table_structure_pred_bbox(
         table_cells_result, crop_start_point, img_shape
     )
 
@@ -302,7 +335,7 @@ def get_table_recognition_res(
     pred_html = get_html_result(matched_index, ocr_texts_res, table_structure_result)
 
     single_img_res = {
-        "cell_box_list": ori_table_cells,
+        "cell_box_list": table_cells_result,
         "table_ocr_pred": table_ocr_pred,
         "pred_html": pred_html,
     }
