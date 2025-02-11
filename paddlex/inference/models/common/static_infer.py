@@ -447,6 +447,7 @@ class MultibackendInfer(StaticInfer):
                 f"Unavailable inference backend {repr(self._config.backend)}"
             )
 
+        # Currently only NVIDIA GPUs are supported
         if self._config.device_type == "gpu" and not is_built_with_gpu():
             raise RuntimeError("No GPU support")
 
