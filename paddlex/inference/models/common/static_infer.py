@@ -25,6 +25,7 @@ from ...utils.hpi import (
     ONNXRuntimeConfig,
     OpenVINOConfig,
     TensorRTConfig,
+    OMRuntimeConfig,
     get_model_paths,
     suggest_inference_backend_and_config,
 )
@@ -478,6 +479,8 @@ class MultibackendInfer(StaticInfer):
             pass
         elif self._config.device_type == "gpu":
             ui_option.use_gpu(self._config.device_id or 0)
+        elif self._config.device_type == "npu":
+            ui_option.use_ascend()
         else:
             raise RuntimeError(
                 f"Unsupported device type {repr(self._config.device_type)}"
@@ -485,9 +488,14 @@ class MultibackendInfer(StaticInfer):
 
         model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
         # XXX: The model format is hard-coded for now
-        if "onnx" not in model_paths:
-            raise RuntimeError("ONNX model is required")
-        ui_option.set_model_path(str(model_paths["onnx"]), "", ModelFormat.ONNX)
+        if backend in ["openvino", "onnxruntime", "tensorrt"]:
+            if "onnx" not in model_paths:
+                raise RuntimeError("ONNX model is required")
+            ui_option.set_model_path(str(model_paths["onnx"]), "", ModelFormat.ONNX)
+        if backend == "omruntime":
+            if "om" not in model_paths:
+                raise RuntimeError("OM model is required")
+            ui_option.set_model_path(str(model_paths["om"]), "", ModelFormat.OM)
 
         if backend == "openvino":
             backend_config = OpenVINOConfig.model_validate(backend_config)
@@ -523,6 +531,8 @@ class MultibackendInfer(StaticInfer):
             if backend_config.dynamic_shapes is not None:
                 for name, shapes in backend_config.dynamic_shapes.items():
                     ui_option.trt_option.set_shape(name, *shapes)
+        elif backend == "omruntime":
+            ui_option.use_om_backend()
         else:
             raise RuntimeError(f"Unsupported inference backend {repr(backend)}")
 

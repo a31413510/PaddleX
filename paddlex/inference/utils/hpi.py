@@ -45,7 +45,7 @@ class HPIInfo(BaseModel):
 
 
 # For multi-backend inference only
-InferenceBackend: TypeAlias = Literal["openvino", "onnxruntime", "tensorrt"]
+InferenceBackend: TypeAlias = Literal["openvino", "onnxruntime", "tensorrt", "omruntime"]
 
 
 class OpenVINOConfig(BaseModel):
@@ -55,6 +55,9 @@ class OpenVINOConfig(BaseModel):
 class ONNXRuntimeConfig(BaseModel):
     cpu_num_threads: int = 8
 
+class OMRuntimeConfig(BaseModel):
+    pass
+    
 
 class TensorRTConfig(BaseModel):
     precision: Literal["fp32", "fp16"] = "fp32"
@@ -79,12 +82,13 @@ class ModelInfo(BaseModel):
     hpi_info: Optional[HPIInfo] = None
 
 
-ModelFormat: TypeAlias = Literal["paddle", "onnx"]
+ModelFormat: TypeAlias = Literal["paddle", "onnx", "om"]
 
 
 class ModelPaths(TypedDict, total=False):
     paddle: Tuple[Path, Path]
     onnx: Path
+    om: Path
 
 
 def get_model_paths(
@@ -108,6 +112,8 @@ def get_model_paths(
         )
     if (model_dir / f"{model_file_prefix}.onnx").exists():
         model_paths["onnx"] = model_dir / f"{model_file_prefix}.onnx"
+    if (model_dir / f"{model_file_prefix}.om").exists():
+        model_paths["om"] = model_dir / f"{model_file_prefix}.om"
     return model_paths
 
 
