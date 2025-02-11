@@ -425,12 +425,37 @@ class MultibackendInfer(StaticInfer):
         return outputs
 
     def _prepare_ui_option(self, ui_option=None):
-        from ultra_infer import RuntimeOption, ModelFormat
+        from ultra_infer import (
+            ModelFormat,
+            RuntimeOption,
+            is_built_with_gpu,
+            is_built_with_openvino,
+            is_built_with_ort,
+            is_built_with_trt,
+        )
+
+        available_backends = []
+        if is_built_with_openvino():
+            available_backends.append("openvino")
+        if is_built_with_ort():
+            available_backends.append("onnxruntime")
+        if is_built_with_trt():
+            available_backends.append("tensorrt")
+
+        if self._config.backend not in available_backends:
+            raise RuntimeError(
+                f"Unavailable inference backend {repr(self._config.backend)}"
+            )
+
+        if self._config.device_type == "gpu" and not is_built_with_gpu():
+            raise RuntimeError("No GPU support")
 
         if self._config.auto_config:
             # Should we use the strategy pattern here to allow extensible
             # strategies?
-            ret = suggest_inference_backend_and_config(self._config)
+            ret = suggest_inference_backend_and_config(
+                self._config, available_backends=available_backends
+            )
             if ret[0] is None:
                 # Should I use a custom exception?
                 raise RuntimeError(

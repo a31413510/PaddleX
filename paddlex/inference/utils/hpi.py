@@ -119,12 +119,16 @@ _PREFERRED_INFERENCE_BACKENDS: Final[Dict[str, List[InferenceBackend]]] = {
 
 def suggest_inference_backend_and_config(
     mbi_config: MBIConfig,
+    available_backends: Optional[List[InferenceBackend]] = None,
 ) -> Union[Tuple[InferenceBackend, Dict[str, Any]], Tuple[None, str]]:
     # TODO: The current strategy is naive. It would be better to consider
     # additional important factors, such as NVIDIA GPU compute capability and
     # device manufacturers. We should also allow users to provide hints.
 
     import lazy_paddle as paddle
+
+    if available_backends is not None and not available_backends:
+        return None, "No inference backends are available."
 
     paddle_version = paddle.__version__
     if paddle_version != "3.0.0-rc0":
@@ -179,6 +183,14 @@ def suggest_inference_backend_and_config(
     candidate_backends = sorted(
         supported_backends, key=lambda b: preferred_backends.index(b)
     )
+
+    if available_backends is not None:
+        candidate_backends = [
+            backend for backend in candidate_backends if backend in available_backends
+        ]
+
+    if not candidate_backends:
+        return None, "No inference backend can be selected."
 
     if mbi_config.backend is not None:
         if mbi_config.backend not in candidate_backends:
