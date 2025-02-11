@@ -25,7 +25,7 @@ from ...utils.hpi import (
     ONNXRuntimeConfig,
     OpenVINOConfig,
     TensorRTConfig,
-    OMRuntimeConfig,
+    OMConfig,
     get_model_paths,
     suggest_inference_backend_and_config,
 )
@@ -429,7 +429,7 @@ class MultibackendInfer(StaticInfer):
         from ultra_infer import (
             ModelFormat,
             RuntimeOption,
-            is_built_with_gpu,
+            is_built_with_om,
             is_built_with_openvino,
             is_built_with_ort,
             is_built_with_trt,
@@ -442,15 +442,13 @@ class MultibackendInfer(StaticInfer):
             available_backends.append("onnxruntime")
         if is_built_with_trt():
             available_backends.append("tensorrt")
+        if is_built_with_om():
+            available_backends.append("om")
 
         if self._config.backend not in available_backends:
             raise RuntimeError(
                 f"Unavailable inference backend {repr(self._config.backend)}"
             )
-
-        # Currently only NVIDIA GPUs are supported
-        if self._config.device_type == "gpu" and not is_built_with_gpu():
-            raise RuntimeError("No GPU support")
 
         if self._config.auto_config:
             # Should we use the strategy pattern here to allow extensible
@@ -492,7 +490,7 @@ class MultibackendInfer(StaticInfer):
             if "onnx" not in model_paths:
                 raise RuntimeError("ONNX model is required")
             ui_option.set_model_path(str(model_paths["onnx"]), "", ModelFormat.ONNX)
-        if backend == "omruntime":
+        if backend == "om":
             if "om" not in model_paths:
                 raise RuntimeError("OM model is required")
             ui_option.set_model_path(str(model_paths["om"]), "", ModelFormat.OM)
@@ -531,7 +529,8 @@ class MultibackendInfer(StaticInfer):
             if backend_config.dynamic_shapes is not None:
                 for name, shapes in backend_config.dynamic_shapes.items():
                     ui_option.trt_option.set_shape(name, *shapes)
-        elif backend == "omruntime":
+        elif backend == "om":
+            backend_config = OMConfig.model_validate(backend_config)
             ui_option.use_om_backend()
         else:
             raise RuntimeError(f"Unsupported inference backend {repr(backend)}")

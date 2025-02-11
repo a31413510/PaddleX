@@ -45,7 +45,7 @@ class HPIInfo(BaseModel):
 
 
 # For multi-backend inference only
-InferenceBackend: TypeAlias = Literal["openvino", "onnxruntime", "tensorrt", "omruntime"]
+InferenceBackend: TypeAlias = Literal["openvino", "onnxruntime", "tensorrt", "om"]
 
 
 class OpenVINOConfig(BaseModel):
@@ -55,15 +55,16 @@ class OpenVINOConfig(BaseModel):
 class ONNXRuntimeConfig(BaseModel):
     cpu_num_threads: int = 8
 
-class OMRuntimeConfig(BaseModel):
-    pass
-    
 
 class TensorRTConfig(BaseModel):
     precision: Literal["fp32", "fp16"] = "fp32"
     use_dynamic_shapes: bool = True
     dynamic_shapes: Optional[Dict[str, List[List[int]]]] = None
     # TODO: Control caching behavior
+
+
+class OMConfig(BaseModel):
+    pass
 
 
 class MBIConfig(BaseModel):
