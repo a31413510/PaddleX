@@ -290,11 +290,6 @@ class PaddleInfer(StaticInfer):
         # for TRT
         if run_mode.startswith("trt"):
             assert self.option.device == "gpu"
-            precision_map = {
-                "trt_int8": Config.Precision.Int8,
-                "trt_fp32": Config.Precision.Float32,
-                "trt_fp16": Config.Precision.Half,
-            }
             cache_dir = self.model_dir / CACHE_DIR / "paddle"
             config = self._configure_trt(
                 run_mode,
@@ -314,25 +309,6 @@ class PaddleInfer(StaticInfer):
                 if hasattr(config, "enable_new_executor"):
                     config.enable_new_executor()
                 config.set_optimization_level(3)
-            # NOTE: The pptrt settings are not aligned with those of FD.
-            else:
-                if not USE_PIR_TRT:
-                    precision_map = {
-                        "trt_int8": Config.Precision.Int8,
-                        "trt_fp32": Config.Precision.Float32,
-                        "trt_fp16": Config.Precision.Half,
-                    }
-                    config.enable_tensorrt_engine(
-                        workspace_size=(1 << 30) * self.option.batch_size,
-                        max_batch_size=self.option.batch_size,
-                        min_subgraph_size=self.option.min_subgraph_size,
-                        precision_mode=precision_map[run_mode],
-                        use_static=self.option.trt_use_static,
-                        use_calib_mode=self.option.trt_calib_mode,
-                    )
-                    config.enable_tuned_tensorrt_dynamic_shape(
-                        self.option.shape_info_filename, True
-                    )
         elif self.option.device == "npu":
             config.enable_custom_device("npu")
         elif self.option.device_type == "xpu":

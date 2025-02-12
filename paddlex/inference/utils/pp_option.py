@@ -293,11 +293,11 @@ class PaddlePredictorOption(object):
     # TODO: Issue deprecation warnings
     @property
     def min_subgraph_size(self):
-        return self.trt_max_min_subgraph_size
+        return self.trt_min_subgraph_size
 
     @min_subgraph_size.setter
     def min_subgraph_size(self, min_subgraph_size):
-        self.trt_max_min_subgraph_size = min_subgraph_size
+        self.trt_min_subgraph_size = min_subgraph_size
 
     @property
     def shape_info_filename(self):
