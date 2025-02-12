@@ -14,9 +14,12 @@
 
 import abc
 from typing import Union, Sequence, Tuple, List
-import lazy_paddle as paddle
-import numpy as np
 from pathlib import Path
+
+import paddle
+import numpy as np
+from paddle.inference import Config, create_predictor
+from typing_extensions import assert_never
 
 from ....utils import logging
 from ...utils.pp_option import PaddlePredictorOption
@@ -224,8 +227,6 @@ class PaddleInfer(StaticInfer):
         "paddle.base.libpaddle.PaddleInferTensor",
     ]:
         """_create"""
-        from lazy_paddle.inference import Config, create_predictor
-
         model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
         if "paddle" not in model_paths:
             raise RuntimeError("No valid Paddle model found")
@@ -435,15 +436,19 @@ class MultibackendInfer(StaticInfer):
             is_built_with_trt,
         )
 
+        model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
         available_backends = []
-        if is_built_with_openvino():
+        if is_built_with_openvino() and "onnx" in model_paths:
             available_backends.append("openvino")
-        if is_built_with_ort():
+        if is_built_with_ort() and "onnx" in model_paths:
             available_backends.append("onnxruntime")
-        if is_built_with_trt():
+        if is_built_with_trt() and "onnx" in model_paths:
             available_backends.append("tensorrt")
-        if is_built_with_om():
+        if is_built_with_om() and "om" in model_paths:
             available_backends.append("om")
+
+        if not available_backends:
+            raise RuntimeError("No inference backend is available")
 
         if self._config.backend not in available_backends:
             raise RuntimeError(
@@ -484,16 +489,14 @@ class MultibackendInfer(StaticInfer):
                 f"Unsupported device type {repr(self._config.device_type)}"
             )
 
-        model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
-        # XXX: The model format is hard-coded for now
-        if backend in ["openvino", "onnxruntime", "tensorrt"]:
-            if "onnx" not in model_paths:
-                raise RuntimeError("ONNX model is required")
+        if backend in ("openvino", "onnxruntime", "tensorrt"):
+            assert "onnx" in model_paths
             ui_option.set_model_path(str(model_paths["onnx"]), "", ModelFormat.ONNX)
-        if backend == "om":
-            if "om" not in model_paths:
-                raise RuntimeError("OM model is required")
+        elif backend == "om":
+            assert "om" in model_paths
             ui_option.set_model_path(str(model_paths["om"]), "", ModelFormat.OM)
+        else:
+            assert_never(backend)
 
         if backend == "openvino":
             backend_config = OpenVINOConfig.model_validate(backend_config)

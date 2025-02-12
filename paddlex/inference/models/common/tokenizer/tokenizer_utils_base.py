@@ -24,7 +24,7 @@ from enum import Enum
 from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Tuple, Union
 
 import numpy as np
-import lazy_paddle as paddle
+import paddle
 
 from .....utils import logging
 

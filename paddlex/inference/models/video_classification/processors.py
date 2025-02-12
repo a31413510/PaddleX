@@ -23,7 +23,7 @@ import cv2
 import math
 import json
 import tempfile
-import lazy_paddle
+import paddle
 
 
 class Scale:
@@ -163,7 +163,7 @@ class CenterCrop:
 
         crop_imgs = []
         th, tw = self.target_size, self.target_size
-        if isinstance(imgs, lazy_paddle.Tensor):
+        if isinstance(imgs, paddle.Tensor):
             h, w = imgs.shape[-2:]
             x1 = int(round((w - tw) / 2.0)) if self.do_round else (w - tw) // 2
             y1 = int(round((h - th) / 2.0)) if self.do_round else (h - th) // 2

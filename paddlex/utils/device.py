@@ -15,7 +15,7 @@
 import os
 import GPUtil
 
-import lazy_paddle as paddle
+import paddle
 from . import logging
 from .errors import raise_unsupported_device_error
 

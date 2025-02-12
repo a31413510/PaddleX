@@ -16,7 +16,7 @@
 import os
 import json
 import argparse
-import lazy_paddle as paddle
+import paddle
 
 from ....utils import logging
 

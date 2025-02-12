@@ -19,8 +19,8 @@ from os import PathLike
 from pathlib import Path
 from typing import Any, Dict, Final, List, Literal, Optional, Tuple, TypedDict, Union
 
-from pydantic import BaseModel
-from typing_extensions import TypeAlias
+from pydantic import BaseModel, Field
+from typing_extensions import Annotated, TypeAlias
 
 from ...utils.flags import FLAGS_json_format_model
 
@@ -68,7 +68,7 @@ class OMConfig(BaseModel):
 
 
 class MBIConfig(BaseModel):
-    model_name: str
+    pdx_model_name: Annotated[str, Field(alias="model_name")]
     device_type: str
     device_id: Optional[int] = None
     auto_config: bool = True
@@ -132,7 +132,7 @@ def suggest_inference_backend_and_config(
     # additional important factors, such as NVIDIA GPU compute capability and
     # device manufacturers. We should also allow users to provide hints.
 
-    import lazy_paddle as paddle
+    import paddle
 
     if available_backends is not None and not available_backends:
         return None, "No inference backends are available."
@@ -153,11 +153,11 @@ def suggest_inference_backend_and_config(
         # FIXME: We should not rely on the PaddlePaddle library to detemine CUDA
         # and cuDNN versions.
         # Should we inject environment info from the outside?
-        from lazy_paddle import version as paddle_version
+        import paddle.version
 
-        cuda_version = paddle_version.cuda()
+        cuda_version = paddle.version.cuda()
         cuda_version = cuda_version.replace(".", "")
-        cudnn_version = paddle_version.cudnn().rsplit(".", 1)[0]
+        cudnn_version = paddle.version.cudnn().rsplit(".", 1)[0]
         cudnn_version = cudnn_version.replace(".", "")
         key = f"gpu_cuda{cuda_version}_cudnn{cudnn_version}"
     else:
@@ -172,9 +172,9 @@ def suggest_inference_backend_and_config(
         return None, "No prior knowledge can be utilized."
     mbi_model_info_collection_for_env = mbi_model_info_collection[key]
 
-    if mbi_config.model_name not in mbi_model_info_collection_for_env:
-        return None, f"{repr(mbi_config.model_name)} is not a known model."
-    supported_pseudo_backends = mbi_model_info_collection_for_env[mbi_config.model_name]
+    if mbi_config.pdx_model_name not in mbi_model_info_collection_for_env:
+        return None, f"{repr(mbi_config.pdx_model_name)} is not a known model."
+    supported_pseudo_backends = mbi_model_info_collection_for_env[mbi_config.pdx_model_name]
 
     supported_backends = []
     for pb in supported_pseudo_backends:

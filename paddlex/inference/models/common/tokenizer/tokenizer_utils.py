@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy
 import numpy as np
-import lazy_paddle as paddle
+import paddle
 from jinja2 import Template
 from jinja2.exceptions import TemplateError, TemplateSyntaxError
 from jinja2.sandbox import ImmutableSandboxedEnvironment

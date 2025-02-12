@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import numpy as np
-import lazy_paddle as paddle
+import paddle
 from ...utils.io import AudioReader
 
 

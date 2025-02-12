@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from abc import abstractmethod
 from pathlib import Path
-import lazy_paddle as paddle
+
 import numpy as np
+import paddle
+from paddle.inference import Config, create_predictor
 
 from ....utils.flags import FLAGS_json_format_model
 from ....utils import logging
@@ -150,8 +151,6 @@ class BasePaddlePredictor(BaseComponent):
 
     def _create(self):
         """_create"""
-        from lazy_paddle.inference import Config, create_predictor
-
         model_postfix = ".json" if FLAGS_json_format_model else ".pdmodel"
         model_file = (self.model_dir / f"{self.model_prefix}{model_postfix}").as_posix()
         params_file = (self.model_dir / f"{self.model_prefix}.pdiparams").as_posix()
