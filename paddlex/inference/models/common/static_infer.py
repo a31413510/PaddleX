@@ -370,7 +370,7 @@ class PaddleInfer(StaticInfer):
 
     def _configure_trt(self, run_mode, model_file, params_file, cache_dir):
         if USE_PIR_TRT:
-            trt_save_path = cache_dir / self.model_prefix
+            trt_save_path = cache_dir / "trt" / self.model_prefix
             _convert_trt(
                 run_mode,
                 model_file,
