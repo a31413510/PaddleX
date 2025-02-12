@@ -22,11 +22,11 @@ from ...common.batch_sampler import ImageBatchSampler
 from ...common.reader import ReadImage
 from .processors import GroundingDINOProcessor, GroundingDINOPostProcessor
 from ..common import StaticInfer
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from ..object_detection.result import DetResult
 
 
-class OVDetPredictor(BasicPredictor):
+class OVDetPredictor(BasePredictor):
 
     entities = MODELS
 

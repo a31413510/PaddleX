@@ -28,12 +28,12 @@ from ..common import (
     StaticInfer,
 )
 from .processors import MapToMask
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .result import UadResult
 
 
-class UadPredictor(BasicPredictor):
-    """UadPredictor that inherits from BasicPredictor."""
+class UadPredictor(BasePredictor):
+    """UadPredictor that inherits from BasePredictor."""
 
     entities = MODELS
 

@@ -20,7 +20,7 @@ from ....utils.func_register import FuncRegister
 from ....modules.object_detection.model_list import MODELS
 from ...common.batch_sampler import ImageBatchSampler
 
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .processors import (
     DetPad,
     DetPostProcess,
@@ -36,7 +36,7 @@ from .result import DetResult
 from .utils import STATIC_SHAPE_MODEL_LIST
 
 
-class DetPredictor(BasicPredictor):
+class DetPredictor(BasePredictor):
 
     entities = MODELS
 

@@ -26,12 +26,12 @@ from ..common import (
     ToCHWImage,
     ToBatch,
 )
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .processors import DetResizeForTest, NormalizeImage, DBPostProcess
 from .result import TextDetResult
 
 
-class TextDetPredictor(BasicPredictor):
+class TextDetPredictor(BasePredictor):
 
     entities = MODELS
 

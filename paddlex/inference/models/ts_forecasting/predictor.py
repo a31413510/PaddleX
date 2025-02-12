@@ -29,12 +29,12 @@ from ..common import (
     TStoBatch,
 )
 from .processors import ArraytoTS, TSDeNormalize
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .result import TSFcResult
 
 
-class TSFcPredictor(BasicPredictor):
-    """TSFcPredictor that inherits from BasicPredictor."""
+class TSFcPredictor(BasePredictor):
+    """TSFcPredictor that inherits from BasePredictor."""
 
     entities = MODELS
 

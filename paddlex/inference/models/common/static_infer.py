@@ -13,18 +13,18 @@
 # limitations under the License.
 
 import abc
+import subprocess
 from typing import Union, Sequence, Tuple, List
 from pathlib import Path
 
 import paddle
 import numpy as np
 from paddle.inference import Config, create_predictor
-from typing_extensions import assert_never
 
 from ....utils import logging
 from ...utils.pp_option import PaddlePredictorOption
 from ...utils.hpi import (
-    MBIConfig,
+    HPIConfig,
     ONNXRuntimeConfig,
     OpenVINOConfig,
     TensorRTConfig,
@@ -234,6 +234,19 @@ class PaddleInfer(StaticInfer):
 
         config = Config(str(model_file), str(params_file))
 
+        run_mode = self.option.run_mode
+        if self.option.model_name == "LaTeX_OCR_rec":
+            import cpuinfo
+
+            if (
+                "GenuineIntel" in cpuinfo.get_cpu_info().get("vendor_id_raw", "")
+                and run_mode != "mkldnn"
+            ):
+                run_mode = "mkldnn"
+                logging.warning(
+                    "Now, the `LaTeX_OCR_rec` model only support `mkldnn` mode when running on Intel CPU devices. So using `mkldnn` instead."
+                )
+
         config.enable_memory_optim()
         if self.option.device_type in ("gpu", "dcu"):
             if self.option.device_type == "gpu":
@@ -245,11 +258,11 @@ class PaddleInfer(StaticInfer):
                     "trt_fp32": Config.Precision.Float32,
                     "trt_fp16": Config.Precision.Half,
                 }
-                if self.option.run_mode in precision_map.keys():
+                if run_mode in precision_map.keys():
                     cache_dir = self.model_dir / CACHE_DIR / "paddle_inference"
                     self._configure_trt(
                         config,
-                        precision_map[self.option.run_mode],
+                        precision_map[run_mode],
                         model_file,
                         params_file,
                         cache_dir,
@@ -264,10 +277,10 @@ class PaddleInfer(StaticInfer):
         else:
             assert self.option.device_type == "cpu"
             config.disable_gpu()
-            if "mkldnn" in self.option.run_mode:
+            if "mkldnn" in run_mode:
                 try:
                     config.enable_mkldnn()
-                    if "bf16" in self.option.run_mode:
+                    if "bf16" in run_mode:
                         config.enable_mkldnn_bfloat16()
                 except Exception as e:
                     logging.warning(
@@ -284,10 +297,7 @@ class PaddleInfer(StaticInfer):
         config.set_cpu_math_library_num_threads(self.option.cpu_threads)
 
         if self.option.device_type in ("cpu", "gpu"):
-            if not (
-                self.option.device_type == "gpu"
-                and self.option.run_mode.startswith("trt")
-            ):
+            if not (self.option.device_type == "gpu" and run_mode.startswith("trt")):
                 if hasattr(config, "enable_new_ir"):
                     config.enable_new_ir(self.option.enable_new_ir)
                 if hasattr(config, "enable_new_executor"):
@@ -388,19 +398,24 @@ class PaddleInfer(StaticInfer):
                     raise RuntimeError("No dynamic shape information provided")
 
 
-class MultibackendInfer(StaticInfer):
+class HPInfer(StaticInfer):
     def __init__(
         self,
         model_dir: str,
         model_file_prefix: str,
-        config: MBIConfig,
+        config: HPIConfig,
     ) -> None:
         super().__init__()
         self._model_dir = model_dir
         self._model_file_prefix = model_file_prefix
         self._config = config
-        self._ui_option = self._prepare_ui_option()
-        self._ui_runtime = self._build_ui_runtime(self._ui_option)
+        backend, backend_config = self._determine_backend_and_config()
+        if backend == "paddle":
+            self._use_paddle = True
+            self._paddle_infer = self._build_paddle_infer(backend_config)
+        else:
+            self._use_paddle = False
+            self._ui_runtime = self._build_ui_runtime(backend, backend_config)
 
     @property
     def model_dir(self) -> str:
@@ -411,38 +426,35 @@ class MultibackendInfer(StaticInfer):
         return self._model_file_prefix
 
     @property
-    def config(self) -> MBIConfig:
+    def config(self) -> HPIConfig:
         return self._config
 
     def __call__(self, x: Sequence[np.ndarray]) -> List[np.ndarray]:
-        num_inputs = self._ui_runtime.num_inputs()
-        if len(x) != num_inputs:
-            raise ValueError(f"Expected {num_inputs} inputs but got {len(x)} instead")
-        inputs = {}
-        for idx, input_ in enumerate(x):
-            input_name = self._ui_runtime.get_input_info(idx).name
-            input_ = np.ascontiguousarray(input_)
-            inputs[input_name] = input_
-        outputs = self._ui_runtime.infer(inputs)
-        return outputs
+        if self._use_paddle:
+            return self._call_paddle(x)
+        else:
+            return self._call_ui(x)
 
-    def _prepare_ui_option(self, ui_option=None):
+    def _determine_backend_and_config(self):
         from ultra_infer import (
-            ModelFormat,
-            RuntimeOption,
             is_built_with_om,
             is_built_with_openvino,
             is_built_with_ort,
             is_built_with_trt,
         )
 
-        model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
+        model_paths = get_model_paths(self._model_dir, self._model_file_prefix)
+        is_onnx_model_available = "onnx" in model_paths or (
+            self._config.auto_paddle2onnx and "paddle" in model_paths
+        )
         available_backends = []
-        if is_built_with_openvino() and "onnx" in model_paths:
+        if "paddle" in model_paths:
+            available_backends.append("paddle")
+        if is_built_with_openvino() and is_onnx_model_available:
             available_backends.append("openvino")
-        if is_built_with_ort() and "onnx" in model_paths:
+        if is_built_with_ort() and is_onnx_model_available:
             available_backends.append("onnxruntime")
-        if is_built_with_trt() and "onnx" in model_paths:
+        if is_built_with_trt() and is_onnx_model_available:
             available_backends.append("tensorrt")
         if is_built_with_om() and "om" in model_paths:
             available_backends.append("om")
@@ -450,9 +462,12 @@ class MultibackendInfer(StaticInfer):
         if not available_backends:
             raise RuntimeError("No inference backend is available")
 
-        if self._config.backend not in available_backends:
+        if (
+            self._config.backend is not None
+            and self._config.backend not in available_backends
+        ):
             raise RuntimeError(
-                f"Unavailable inference backend {repr(self._config.backend)}"
+                f"Inference backend {repr(self._config.backend)} is unavailable"
             )
 
         if self._config.auto_config:
@@ -475,6 +490,57 @@ class MultibackendInfer(StaticInfer):
                 )
             backend_config = self._config.backend_config or {}
 
+        return backend, backend_config
+
+    def _build_paddle_infer(self, backend_config):
+        kwargs = {
+            "device_type": self._config.device_type,
+            "device_id": self._config.device_id,
+            **backend_config,
+        }
+        # TODO: This is probably redundant. Can we reuse the code in the
+        # predictor class?
+        if (
+            backend_config.get("use_dynamic_shapes", True)
+            and backend_config.get("dynamic_shapes", None) is None
+        ):
+            paddle_info = self._config.hpi_info.backend_configs.paddle_infer
+            if paddle_info is not None and paddle_info.trt_dynamic_shapes is not None:
+                trt_dynamic_shapes = paddle_info.trt_dynamic_shapes
+                logging.debug("TensorRT dynamic shapes set to %s", trt_dynamic_shapes)
+                backend_config["dynamic_shapes"] = trt_dynamic_shapes
+            if paddle_info is not None:
+                if (
+                    "trt_dynamic_shapes" not in kwargs
+                    and paddle_info.trt_dynamic_shapes is not None
+                ):
+                    trt_dynamic_shapes = paddle_info.trt_dynamic_shapes
+                    logging.debug(
+                        "TensorRT dynamic shapes set to %s", trt_dynamic_shapes
+                    )
+                    kwargs["trt_dynamic_shapes"] = trt_dynamic_shapes
+                if (
+                    "trt_dynamic_shape_input_data" not in kwargs
+                    and paddle_info.trt_dynamic_shape_input_data is not None
+                ):
+                    trt_dynamic_shape_input_data = (
+                        paddle_info.trt_dynamic_shape_input_data
+                    )
+                    logging.debug(
+                        "TensorRT dynamic shape input data set to %s",
+                        trt_dynamic_shape_input_data,
+                    )
+                    kwargs["trt_dynamic_shape_input_data"] = (
+                        trt_dynamic_shape_input_data
+                    )
+        pp_option = PaddlePredictorOption(self._config.pdx_model_name, **kwargs)
+        logging.info("Using Paddle backend")
+        logging.info("Paddle predictor option: %s", pp_option)
+        return PaddleInfer(self._model_dir, self._model_file_prefix, option=pp_option)
+
+    def _build_ui_runtime(self, backend, backend_config, ui_option=None):
+        from ultra_infer import ModelFormat, Runtime, RuntimeOption
+
         if ui_option is None:
             ui_option = RuntimeOption()
 
@@ -489,14 +555,39 @@ class MultibackendInfer(StaticInfer):
                 f"Unsupported device type {repr(self._config.device_type)}"
             )
 
+        model_paths = get_model_paths(self.model_dir, self.model_file_prefix)
         if backend in ("openvino", "onnxruntime", "tensorrt"):
-            assert "onnx" in model_paths
+            # XXX: This introduces side effects.
+            if "onnx" not in model_paths:
+                if self._config.auto_paddle2onnx:
+                    if "paddle" not in model_paths:
+                        raise RuntimeError("Paddle model required")
+                    # TODO: Check if the paddle2onnx plugin is properly installed.
+                    # The CLI is used here since there is currently no API.
+                    logging.info("Automatically converting Paddle model to ONNX format")
+                    subprocess.run(
+                        [
+                            "paddlex",
+                            "--paddle2onnx",
+                            "--paddle_model_dir",
+                            self._model_dir,
+                            "--onnx_model_dir",
+                            self._model_dir,
+                        ]
+                    )
+                    model_paths = get_model_paths(
+                        self.model_dir, self.model_file_prefix
+                    )
+                    assert "onnx" in model_paths
+                else:
+                    raise RuntimeError("ONNX model required")
             ui_option.set_model_path(str(model_paths["onnx"]), "", ModelFormat.ONNX)
         elif backend == "om":
-            assert "om" in model_paths
+            if "om" not in model_paths:
+                raise RuntimeError("OM model required")
             ui_option.set_model_path(str(model_paths["om"]), "", ModelFormat.OM)
         else:
-            assert_never(backend)
+            raise ValueError(f"Unsupported inference backend {repr(backend)}")
 
         if backend == "openvino":
             backend_config = OpenVINOConfig.model_validate(backend_config)
@@ -536,14 +627,24 @@ class MultibackendInfer(StaticInfer):
             backend_config = OMConfig.model_validate(backend_config)
             ui_option.use_om_backend()
         else:
-            raise RuntimeError(f"Unsupported inference backend {repr(backend)}")
+            raise ValueError(f"Unsupported inference backend {repr(backend)}")
 
         logging.info("Inference backend: %s", backend)
         logging.info("Inference backend config: %s", backend_config)
 
-        return ui_option
-
-    def _build_ui_runtime(self, ui_option):
-        from ultra_infer import Runtime
-
         return Runtime(ui_option)
+
+    def _call_paddle(self, x: Sequence[np.ndarray]) -> List[np.ndarray]:
+        return self._paddle_infer(x)
+
+    def _call_ui(self, x: Sequence[np.ndarray]) -> List[np.ndarray]:
+        num_inputs = self._ui_runtime.num_inputs()
+        if len(x) != num_inputs:
+            raise ValueError(f"Expected {num_inputs} inputs but got {len(x)} instead")
+        inputs = {}
+        for idx, input_ in enumerate(x):
+            input_name = self._ui_runtime.get_input_info(idx).name
+            input_ = np.ascontiguousarray(input_)
+            inputs[input_name] = input_
+        outputs = self._ui_runtime.infer(inputs)
+        return outputs

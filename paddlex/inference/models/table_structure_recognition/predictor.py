@@ -26,12 +26,12 @@ from ..common import (
     ToCHWImage,
     ToBatch,
 )
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .processors import Pad, TableLabelDecode
 from .result import TableRecResult
 
 
-class TablePredictor(BasicPredictor):
+class TablePredictor(BasePredictor):
     entities = MODELS
 
     _FUNC_MAP = {}

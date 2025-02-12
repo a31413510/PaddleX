@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os, sys
-from typing import Any, Dict, Optional, Union, List, Tuple
+from typing import Dict, Optional, Union, List, Tuple
 import numpy as np
-import cv2
 from sklearn.cluster import KMeans
 from ..base import BasePipeline
 from ..components import CropByBoxes
@@ -43,7 +41,6 @@ class TableRecognitionPipelineV2(BasePipeline):
         device: str = None,
         pp_option: PaddlePredictorOption = None,
         use_hpip: bool = False,
-        hpi_params: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initializes the layout parsing pipeline.
 
@@ -52,12 +49,10 @@ class TableRecognitionPipelineV2(BasePipeline):
             device (str, optional): Device to run the predictions on. Defaults to None.
             pp_option (PaddlePredictorOption, optional): PaddlePredictor options. Defaults to None.
             use_hpip (bool, optional): Whether to use high-performance inference (hpip) for prediction. Defaults to False.
-            hpi_params (Optional[Dict[str, Any]], optional): HPIP parameters. Defaults to None.
+            hpi_config (Optional[Dict[str, Any]], optional): HPIP parameters. Defaults to None.
         """
 
-        super().__init__(
-            device=device, pp_option=pp_option, use_hpip=use_hpip, hpi_params=hpi_params
-        )
+        super().__init__(device=device, pp_option=pp_option, use_hpip=use_hpip)
 
         self.use_doc_preprocessor = config.get("use_doc_preprocessor", True)
         if self.use_doc_preprocessor:
@@ -274,8 +269,10 @@ class TableRecognitionPipelineV2(BasePipeline):
             return pred["structure"]
         else:
             return None
-    
-    def cells_det_results_nms(self, cells_det_results, cells_det_scores, cells_det_threshold=0.3):
+
+    def cells_det_results_nms(
+        self, cells_det_results, cells_det_scores, cells_det_threshold=0.3
+    ):
         """
         Apply Non-Maximum Suppression (NMS) on detection results to remove redundant overlapping bounding boxes.
 
@@ -322,12 +319,14 @@ class TableRecognitionPipelineV2(BasePipeline):
             # Indices of boxes with IoU less than threshold
             inds = np.where(ovr <= cells_det_threshold)[0]
             # Update order, only keep boxes with IoU less than threshold
-            order = order[inds + 1]  # inds shifted by 1 because order[0] is the current box
+            order = order[
+                inds + 1
+            ]  # inds shifted by 1 because order[0] is the current box
         # Select the boxes and scores based on picked indices
         final_boxes = boxes[picked_indices].tolist()
         final_scores = scores[picked_indices].tolist()
         return final_boxes, final_scores
-    
+
     def get_region_ocr_det_boxes(self, ocr_det_boxes, table_box):
         """Adjust the coordinates of ocr_det_boxes that are fully inside table_box relative to table_box.
 
@@ -347,20 +346,26 @@ class TableRecognitionPipelineV2(BasePipeline):
             x_min_b, y_min_b, x_max_b, y_max_b = box
 
             # Check if the box is fully inside table_box
-            if (x_min_b+tol >= x_min_t and y_min_b+tol >= y_min_t and
-                x_max_b+tol <= x_max_t and y_max_b+tol <= y_max_t):
+            if (
+                x_min_b + tol >= x_min_t
+                and y_min_b + tol >= y_min_t
+                and x_max_b + tol <= x_max_t
+                and y_max_b + tol <= y_max_t
+            ):
                 # Adjust the coordinates to be relative to table_box
                 adjusted_box = [
                     x_min_b - x_min_t,  # Adjust x1
                     y_min_b - y_min_t,  # Adjust y1
                     x_max_b - x_min_t,  # Adjust x2
-                    y_max_b - y_min_t   # Adjust y2
+                    y_max_b - y_min_t,  # Adjust y2
                 ]
                 adjusted_boxes.append(adjusted_box)
             # Discard boxes not fully inside table_box
         return adjusted_boxes
 
-    def cells_det_results_reprocessing(self, cells_det_results, cells_det_scores, ocr_det_results, html_pred_boxes_nums):
+    def cells_det_results_reprocessing(
+        self, cells_det_results, cells_det_scores, ocr_det_results, html_pred_boxes_nums
+    ):
         """
         Process and filter cells_det_results based on ocr_det_results and html_pred_boxes_nums.
 
@@ -373,6 +378,7 @@ class TableRecognitionPipelineV2(BasePipeline):
         Returns:
             List[List[float]]: The processed list of rectangles.
         """
+
         # Function to compute IoU between two rectangles
         def compute_iou(box1, box2):
             """
@@ -419,15 +425,17 @@ class TableRecognitionPipelineV2(BasePipeline):
             if N >= num_rects:
                 return rectangles
             # Compute the center points of the rectangles
-            centers = np.array([
+            centers = np.array(
                 [
-                    (rect[0] + rect[2]) / 2,  # Center x-coordinate
-                    (rect[1] + rect[3]) / 2   # Center y-coordinate
+                    [
+                        (rect[0] + rect[2]) / 2,  # Center x-coordinate
+                        (rect[1] + rect[3]) / 2,  # Center y-coordinate
+                    ]
+                    for rect in rectangles
                 ]
-                for rect in rectangles
-            ])
+            )
             # Perform KMeans clustering on the center points to group them into N clusters
-            kmeans = KMeans(n_clusters=N, random_state=0, n_init='auto')
+            kmeans = KMeans(n_clusters=N, random_state=0, n_init="auto")
             labels = kmeans.fit_predict(centers)
             # Initialize a list to store the combined rectangles
             combined_rectangles = []
@@ -457,7 +465,7 @@ class TableRecognitionPipelineV2(BasePipeline):
             return cells_det_results
         # Step 1: If cells_det_results has more rectangles than html_pred_boxes_nums
         elif len(cells_det_results) > html_pred_boxes_nums:
-                return combine_rectangles(cells_det_results, html_pred_boxes_nums)
+            return combine_rectangles(cells_det_results, html_pred_boxes_nums)
         else:
             # return cells_det_results
             # Threshold for IoU
@@ -489,7 +497,9 @@ class TableRecognitionPipelineV2(BasePipeline):
                     # Combine ocr_miss_boxes into N rectangles
                     ocr_supp_boxes = combine_rectangles(ocr_miss_boxes, N)
                     # Combine cells_det_results and ocr_supp_boxes
-                    final_results = np.concatenate((cells_det_results, ocr_supp_boxes), axis=0)
+                    final_results = np.concatenate(
+                        (cells_det_results, ocr_supp_boxes), axis=0
+                    )
                     return final_results.tolist()
 
     def predict_single_table_recognition_res(
@@ -517,22 +527,31 @@ class TableRecognitionPipelineV2(BasePipeline):
             table_structure_pred = next(self.wired_table_rec_model(image_array))
             table_cells_pred = next(
                 self.wired_table_cells_detection_model(image_array, threshold=0.3)
-            ) # Setting the threshold to 0.3 can improve the accuracy of table cells detection. 
-              # If you really want more or fewer table cells detection boxes, the threshold can be adjusted.
+            )  # Setting the threshold to 0.3 can improve the accuracy of table cells detection.
+            # If you really want more or fewer table cells detection boxes, the threshold can be adjusted.
         elif table_cls_result == "wireless_table":
             table_structure_pred = next(self.wireless_table_rec_model(image_array))
             table_cells_pred = next(
                 self.wireless_table_cells_detection_model(image_array, threshold=0.3)
-            ) # Setting the threshold to 0.3 can improve the accuracy of table cells detection. 
-              # If you really want more or fewer table cells detection boxes, the threshold can be adjusted.
+            )  # Setting the threshold to 0.3 can improve the accuracy of table cells detection.
+            # If you really want more or fewer table cells detection boxes, the threshold can be adjusted.
         table_structure_result = self.extract_results(
             table_structure_pred, "table_stru"
         )
-        table_cells_result, table_cells_score = self.extract_results(table_cells_pred, "det")
-        table_cells_result, table_cells_score = self.cells_det_results_nms(table_cells_result, table_cells_score)
-        ocr_det_boxes = self.get_region_ocr_det_boxes(overall_ocr_res["rec_boxes"].tolist(), table_box)
+        table_cells_result, table_cells_score = self.extract_results(
+            table_cells_pred, "det"
+        )
+        table_cells_result, table_cells_score = self.cells_det_results_nms(
+            table_cells_result, table_cells_score
+        )
+        ocr_det_boxes = self.get_region_ocr_det_boxes(
+            overall_ocr_res["rec_boxes"].tolist(), table_box
+        )
         table_cells_result = self.cells_det_results_reprocessing(
-            table_cells_result, table_cells_score, ocr_det_boxes, len(table_structure_pred['bbox'])
+            table_cells_result,
+            table_cells_score,
+            ocr_det_boxes,
+            len(table_structure_pred["bbox"]),
         )
         single_table_recognition_res = get_table_recognition_res(
             table_box, table_structure_result, table_cells_result, overall_ocr_res

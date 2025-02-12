@@ -26,13 +26,13 @@ from ..common import (
     ToCHWImage,
     ToBatch,
 )
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .processors import NormalizeFeatures
 from .result import IdentityResult
 
 
-class ImageFeaturePredictor(BasicPredictor):
-    """ImageFeaturePredictor that inherits from BasicPredictor."""
+class ImageFeaturePredictor(BasePredictor):
+    """ImageFeaturePredictor that inherits from BasePredictor."""
 
     entities = MODELS
 

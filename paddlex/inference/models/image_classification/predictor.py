@@ -26,13 +26,13 @@ from ..common import (
     ToCHWImage,
     ToBatch,
 )
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .processors import Crop, Topk
 from .result import TopkResult
 
 
-class ClasPredictor(BasicPredictor):
-    """ClasPredictor that inherits from BasicPredictor."""
+class ClasPredictor(BasePredictor):
+    """ClasPredictor that inherits from BasePredictor."""
 
     entities = MODELS
 

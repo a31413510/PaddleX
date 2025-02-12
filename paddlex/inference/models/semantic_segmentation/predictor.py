@@ -26,12 +26,12 @@ from ..common import (
     ToBatch,
 )
 from .processors import Resize, SegPostProcess
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .result import SegResult
 
 
-class SegPredictor(BasicPredictor):
-    """SegPredictor that inherits from BasicPredictor."""
+class SegPredictor(BasePredictor):
+    """SegPredictor that inherits from BasePredictor."""
 
     entities = MODELS
 

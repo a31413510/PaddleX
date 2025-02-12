@@ -21,12 +21,12 @@ from ..common import (
     ToBatch,
     StaticInfer,
 )
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .processors import ResizeVideo, Image2Array, NormalizeVideo, DetVideoPostProcess
 from .result import DetVideoResult
 
 
-class VideoDetPredictor(BasicPredictor):
+class VideoDetPredictor(BasePredictor):
 
     entities = MODELS
 

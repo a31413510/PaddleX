@@ -12,11 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict
 from abc import ABC, abstractmethod
-import yaml
-import codecs
 from ...utils.subclass_register import AutoRegisterABCMetaClass
 from ..utils.pp_option import PaddlePredictorOption
 from ..models import BasePredictor
@@ -79,7 +76,7 @@ class BasePipeline(ABC, metaclass=AutoRegisterABCMetaClass):
             raise ValueError(config["model_config_error"])
 
         model_dir = config.get("model_dir", None)
-        hpi_params = config.get("hpi_params", None)
+        hpi_config = config.get("hpi_config", None)
 
         from .. import create_predictor
 
@@ -90,6 +87,7 @@ class BasePipeline(ABC, metaclass=AutoRegisterABCMetaClass):
             batch_size=config.get("batch_size", 1),
             pp_option=self.pp_option,
             use_hpip=self.use_hpip,
+            hpi_config=hpi_config,
             **kwargs,
         )
         return model

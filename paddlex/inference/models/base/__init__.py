@@ -13,4 +13,4 @@
 # limitations under the License.
 
 from .pp_infer import BaseInfer
-from .predictor import BasePredictor, BasicPredictor
+from .predictor import BasePredictor, BasePredictor

@@ -27,7 +27,7 @@ MODELS = getattr(module_3d_model_list, "MODELS")
 from ...common.batch_sampler import Det3DBatchSampler
 from ...common.reader import ReadNuscenesData
 from ..common import StaticInfer
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from ..base.predictor.base_predictor import PredictionWrap
 from .processors import (
     LoadPointsFromFile,
@@ -42,8 +42,8 @@ from .processors import (
 from .result import BEV3DDetResult
 
 
-class BEVDet3DPredictor(BasicPredictor):
-    """BEVDet3DPredictor that inherits from BasicPredictor."""
+class BEVDet3DPredictor(BasePredictor):
+    """BEVDet3DPredictor that inherits from BasePredictor."""
 
     entities = MODELS
 

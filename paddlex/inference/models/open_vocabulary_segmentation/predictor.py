@@ -23,11 +23,11 @@ from ...common.batch_sampler import ImageBatchSampler
 from ...common.reader import ReadImage
 from .processors import SAMProcessor
 from ..common import StaticInfer
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .results import SAMSegResult
 
 
-class OVSegPredictor(BasicPredictor):
+class OVSegPredictor(BasePredictor):
 
     entities = MODELS
 

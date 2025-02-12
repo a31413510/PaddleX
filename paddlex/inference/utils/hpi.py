@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import Annotated, TypeAlias
 
 from ...utils.flags import FLAGS_json_format_model
+from .pp_option import PaddlePredictorOption
 
 
 class PaddleInferenceInfo(BaseModel):
@@ -45,7 +46,9 @@ class HPIInfo(BaseModel):
 
 
 # For multi-backend inference only
-InferenceBackend: TypeAlias = Literal["openvino", "onnxruntime", "tensorrt", "om"]
+InferenceBackend: TypeAlias = Literal[
+    "paddle", "openvino", "onnxruntime", "tensorrt", "om"
+]
 
 
 class OpenVINOConfig(BaseModel):
@@ -67,7 +70,7 @@ class OMConfig(BaseModel):
     pass
 
 
-class MBIConfig(BaseModel):
+class HPIConfig(BaseModel):
     pdx_model_name: Annotated[str, Field(alias="model_name")]
     device_type: str
     device_id: Optional[int] = None
@@ -75,6 +78,7 @@ class MBIConfig(BaseModel):
     backend: Optional[InferenceBackend] = None
     backend_config: Optional[Dict[str, Any]] = None
     hpi_info: Optional[HPIInfo] = None
+    auto_paddle2onnx: bool = True
     # TODO: Add more validation logic here
 
 
@@ -118,14 +122,21 @@ def get_model_paths(
     return model_paths
 
 
-_PREFERRED_INFERENCE_BACKENDS: Final[Dict[str, List[InferenceBackend]]] = {
-    "cpu_x64": ["openvino", "onnxruntime"],
-    "gpu_cuda118_cudnn86": ["tensorrt", "onnxruntime"],
+_PREFERRED_PSEUDO_INFERENCE_BACKENDS: Final[Dict[str, List[InferenceBackend]]] = {
+    "cpu_x64": ["openvino", "onnxruntime", "paddle"],
+    "gpu_cuda118_cudnn86": [
+        "paddle_tensorrt_fp16",
+        "tensorrt_fp16",
+        "tensorrt",
+        "paddle_tensorrt",
+        "onnxruntime",
+        "paddle",
+    ],
 }
 
 
 def suggest_inference_backend_and_config(
-    mbi_config: MBIConfig,
+    hpi_config: HPIConfig,
     available_backends: Optional[List[InferenceBackend]] = None,
 ) -> Union[Tuple[InferenceBackend, Dict[str, Any]], Tuple[None, str]]:
     # TODO: The current strategy is naive. It would be better to consider
@@ -141,14 +152,14 @@ def suggest_inference_backend_and_config(
     if paddle_version != "3.0.0-rc0":
         return None, f"{repr(paddle_version)} is not a supported Paddle version."
 
-    if mbi_config.device_type == "cpu":
+    if hpi_config.device_type == "cpu":
         uname = platform.uname()
         arch = uname.machine.lower()
         if arch == "x86_64":
             key = "cpu_x64"
         else:
             return None, f"{repr(arch)} is not a supported architecture."
-    elif mbi_config.device_type == "gpu":
+    elif hpi_config.device_type == "gpu":
         # Currently only NVIDIA GPUs are supported.
         # FIXME: We should not rely on the PaddlePaddle library to detemine CUDA
         # and cuDNN versions.
@@ -161,60 +172,70 @@ def suggest_inference_backend_and_config(
         cudnn_version = cudnn_version.replace(".", "")
         key = f"gpu_cuda{cuda_version}_cudnn{cudnn_version}"
     else:
-        return None, f"{repr(mbi_config.device_type)} is not a supported device type."
+        return None, f"{repr(hpi_config.device_type)} is not a supported device type."
 
     with importlib.resources.open_text(
-        __package__, "mbi_model_info_collection.json", encoding="utf-8"
+        __package__, "hpi_model_info_collection.json", encoding="utf-8"
     ) as f:
-        mbi_model_info_collection = json.load(f)
+        hpi_model_info_collection = json.load(f)
 
-    if key not in mbi_model_info_collection:
+    if key not in hpi_model_info_collection:
         return None, "No prior knowledge can be utilized."
-    mbi_model_info_collection_for_env = mbi_model_info_collection[key]
+    hpi_model_info_collection_for_env = hpi_model_info_collection[key]
 
-    if mbi_config.pdx_model_name not in mbi_model_info_collection_for_env:
-        return None, f"{repr(mbi_config.pdx_model_name)} is not a known model."
-    supported_pseudo_backends = mbi_model_info_collection_for_env[mbi_config.pdx_model_name]
+    if hpi_config.pdx_model_name not in hpi_model_info_collection_for_env:
+        return None, f"{repr(hpi_config.pdx_model_name)} is not a known model."
+    supported_pseudo_backends = hpi_model_info_collection_for_env[
+        hpi_config.pdx_model_name
+    ]
 
-    supported_backends = []
+    assert key in _PREFERRED_PSEUDO_INFERENCE_BACKENDS
+    preferred_pseudo_backends = _PREFERRED_PSEUDO_INFERENCE_BACKENDS[key]
+    assert all(pb in preferred_pseudo_backends for pb in supported_pseudo_backends)
+    supported_pseudo_backends = sorted(
+        supported_pseudo_backends, key=lambda pb: preferred_pseudo_backends.index(pb)
+    )
+
+    candidate_backends = []
+    backend_to_pseudo_backend = {}
     for pb in supported_pseudo_backends:
-        if pb == "tensorrt_fp16":
+        if pb.startswith("paddle"):
+            backend = "paddle"
+        elif pb.startswith("tensorrt"):
             backend = "tensorrt"
         else:
             backend = pb
-        supported_backends.append(backend)
-
-    assert key in _PREFERRED_INFERENCE_BACKENDS
-    preferred_backends = _PREFERRED_INFERENCE_BACKENDS[key]
-    assert all(backend in preferred_backends for backend in supported_backends)
-    candidate_backends = sorted(
-        supported_backends, key=lambda b: preferred_backends.index(b)
-    )
-
-    if available_backends is not None:
-        candidate_backends = [
-            backend for backend in candidate_backends if backend in available_backends
-        ]
+        if available_backends is not None and backend not in available_backends:
+            continue
+        candidate_backends.append(backend)
+        assert backend not in backend_to_pseudo_backend
+        backend_to_pseudo_backend[backend] = pb
 
     if not candidate_backends:
         return None, "No inference backend can be selected."
 
-    if mbi_config.backend is not None:
-        if mbi_config.backend not in candidate_backends:
+    if hpi_config.backend is not None:
+        if hpi_config.backend not in candidate_backends:
             return (
                 None,
-                f"{repr(mbi_config.backend)} is not a supported inference backend.",
+                f"{repr(hpi_config.backend)} is not a supported inference backend.",
             )
-        suggested_backend = mbi_config.backend
+        suggested_backend = hpi_config.backend
     else:
         suggested_backend = candidate_backends[0]
 
-    if suggested_backend == "tensorrt" and "tensorrt_fp16" in supported_pseudo_backends:
-        suggested_backend_config = {"precision": "fp16"}
-    else:
-        suggested_backend_config = {}
+    suggested_backend_config = {}
+    if suggested_backend == "paddle":
+        if backend_to_pseudo_backend["paddle"] == "paddle_tensorrt_fp32":
+            suggested_backend_config.update({"run_mode": "trt_fp32"})
+        elif backend_to_pseudo_backend["paddle"] == "paddle_tensorrt_fp16":
+            # TODO: Check if the target device supports FP16.
+            suggested_backend_config.update({"run_mode": "trt_fp16"})
+    elif suggested_backend == "tensorrt":
+        if backend_to_pseudo_backend["tensorrt"] == "tensorrt_fp16":
+            suggested_backend_config.update({"precision": "fp16"})
 
-    if mbi_config.backend_config is not None:
-        suggested_backend_config.update(mbi_config.backend_config)
+    if hpi_config.backend_config is not None:
+        suggested_backend_config.update(hpi_config.backend_config)
 
     return suggested_backend, suggested_backend_config

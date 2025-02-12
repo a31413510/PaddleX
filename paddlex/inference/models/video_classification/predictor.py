@@ -17,7 +17,7 @@ from ....utils.func_register import FuncRegister
 from ....modules.video_classification.model_list import MODELS
 from ...common.batch_sampler import VideoBatchSampler
 from ...common.reader import ReadVideo
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .processors import (
     Scale,
     CenterCrop,
@@ -29,7 +29,7 @@ from .processors import (
 from .result import TopkVideoResult
 
 
-class VideoClasPredictor(BasicPredictor):
+class VideoClasPredictor(BasePredictor):
 
     entities = MODELS
 

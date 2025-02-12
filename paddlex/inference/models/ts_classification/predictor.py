@@ -30,12 +30,12 @@ from ..common import (
 )
 
 from .processors import GetCls, BuildPadMask
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .result import TSClsResult
 
 
-class TSClsPredictor(BasicPredictor):
-    """TSClsPredictor that inherits from BasicPredictor."""
+class TSClsPredictor(BasePredictor):
+    """TSClsPredictor that inherits from BasePredictor."""
 
     entities = MODELS
 

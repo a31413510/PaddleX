@@ -23,13 +23,13 @@ from ..common import (
     ToCHWImage,
     ToBatch,
 )
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .processors import DocTrPostProcess
 from .result import DocTrResult
 
 
-class WarpPredictor(BasicPredictor):
-    """WarpPredictor that inherits from BasicPredictor."""
+class WarpPredictor(BasePredictor):
+    """WarpPredictor that inherits from BasePredictor."""
 
     entities = MODELS
 

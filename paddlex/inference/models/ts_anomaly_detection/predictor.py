@@ -29,12 +29,12 @@ from ..common import (
     TStoBatch,
 )
 from .processors import GetAnomaly
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .result import TSAdResult
 
 
-class TSAdPredictor(BasicPredictor):
-    """TSAdPredictor that inherits from BasicPredictor."""
+class TSAdPredictor(BasePredictor):
+    """TSAdPredictor that inherits from BasePredictor."""
 
     entities = MODELS
 

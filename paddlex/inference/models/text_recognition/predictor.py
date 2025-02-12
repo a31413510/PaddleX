@@ -22,12 +22,12 @@ from ..common import (
     Normalize,
     ToCHWImage,
 )
-from ..base import BasicPredictor
+from ..base import BasePredictor
 from .processors import OCRReisizeNormImg, CTCLabelDecode, ToBatch
 from .result import TextRecResult
 
 
-class TextRecPredictor(BasicPredictor):
+class TextRecPredictor(BasePredictor):
 
     entities = MODELS
 
