@@ -100,6 +100,7 @@ class BEVDet3DPredictor(BasePredictor):
             name, op = func(self, **args) if args else func(self)
             if op:
                 pre_tfs[name] = op
+        pre_tfs["GetInferInput"] = GetInferInput()
 
         infer = StaticInfer(
             model_dir=self.model_dir,

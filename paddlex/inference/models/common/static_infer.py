@@ -22,6 +22,7 @@ import numpy as np
 from paddle.inference import Config, create_predictor
 
 from ....utils import logging
+from ....utils.flags import DEBUG, USE_PIR_TRT
 from ...utils.pp_option import PaddlePredictorOption
 from ...utils.hpi import (
     HPIConfig,
@@ -123,6 +124,47 @@ def _collect_trt_shape_range_info(
     # definitely a bad idea to count on the implementation-dependent behavior of
     # a garbage collector. Is there a more explicit and deterministic way to
     # handle this?
+
+
+def _convert_trt(
+    mode, pp_model_file, pp_params_file, trt_save_path, trt_dynamic_shapes
+):
+    from paddle.tensorrt.export import (
+        Input,
+        TensorRTConfig,
+        convert,
+        PrecisionMode,
+    )
+
+    def _get_input_names(model_file, params_file):
+        # HACK
+        config = Config(model_file, params_file)
+        config.disable_glog_info()
+        predictor = create_predictor(config)
+        return predictor.get_input_names()
+
+    precision_map = {
+        "trt_int8": PrecisionMode.INT8,
+        "trt_fp32": PrecisionMode.FP32,
+        "trt_fp16": PrecisionMode.FP16,
+    }
+    trt_inputs = []
+    input_names = _get_input_names(pp_model_file, pp_params_file)
+    for name in input_names:
+        min_shape, opt_shape, max_shape = trt_dynamic_shapes[name]
+        trt_input = Input(
+            min_input_shape=min_shape,
+            optim_input_shape=opt_shape,
+            max_input_shape=max_shape,
+        )
+        trt_inputs.append(trt_input)
+
+    # Create TensorRTConfig
+    trt_config = TensorRTConfig(inputs=trt_inputs)
+    trt_config.precision_mode = precision_map[mode]
+    trt_config.save_model_dir = str(trt_save_path)
+    pp_model_path = str(pp_model_file.with_suffix(""))
+    convert(pp_model_path, trt_config)
 
 
 class PaddleCopy2GPU:
@@ -232,8 +274,6 @@ class PaddleInfer(StaticInfer):
             raise RuntimeError("No valid Paddle model found")
         model_file, params_file = model_paths["paddle"]
 
-        config = Config(str(model_file), str(params_file))
-
         run_mode = self.option.run_mode
         if self.option.model_name == "LaTeX_OCR_rec":
             import cpuinfo
@@ -247,33 +287,63 @@ class PaddleInfer(StaticInfer):
                     "Now, the `LaTeX_OCR_rec` model only support `mkldnn` mode when running on Intel CPU devices. So using `mkldnn` instead."
                 )
 
-        config.enable_memory_optim()
-        if self.option.device_type in ("gpu", "dcu"):
-            if self.option.device_type == "gpu":
-                config.exp_disable_mixed_precision_ops({"feed", "fetch"})
-            config.enable_use_gpu(100, self.option.device_id or 0)
-            if self.option.device_type == "gpu":
-                precision_map = {
-                    "trt_int8": Config.Precision.Int8,
-                    "trt_fp32": Config.Precision.Float32,
-                    "trt_fp16": Config.Precision.Half,
-                }
-                if run_mode in precision_map.keys():
-                    cache_dir = self.model_dir / CACHE_DIR / "paddle_inference"
-                    self._configure_trt(
-                        config,
-                        precision_map[run_mode],
-                        model_file,
-                        params_file,
-                        cache_dir,
-                    )
+        # for TRT
+        if run_mode.startswith("trt"):
+            assert self.option.device == "gpu"
+            precision_map = {
+                "trt_int8": Config.Precision.Int8,
+                "trt_fp32": Config.Precision.Float32,
+                "trt_fp16": Config.Precision.Half,
+            }
+            cache_dir = self.model_dir / CACHE_DIR / "paddle"
+            config = self._configure_trt(
+                run_mode,
+                model_file,
+                params_file,
+                cache_dir,
+            )
+        else:
+            config = Config(str(model_file), str(params_file))
 
-        elif self.option.device_type == "npu":
+        if self.option.device == "gpu":
+            config.exp_disable_mixed_precision_ops({"feed", "fetch"})
+            config.enable_use_gpu(100, self.option.device_id)
+            if not run_mode.startswith("trt"):
+                if hasattr(config, "enable_new_ir"):
+                    config.enable_new_ir(self.option.enable_new_ir)
+                if hasattr(config, "enable_new_executor"):
+                    config.enable_new_executor()
+                config.set_optimization_level(3)
+            # NOTE: The pptrt settings are not aligned with those of FD.
+            else:
+                if not USE_PIR_TRT:
+                    precision_map = {
+                        "trt_int8": Config.Precision.Int8,
+                        "trt_fp32": Config.Precision.Float32,
+                        "trt_fp16": Config.Precision.Half,
+                    }
+                    config.enable_tensorrt_engine(
+                        workspace_size=(1 << 30) * self.option.batch_size,
+                        max_batch_size=self.option.batch_size,
+                        min_subgraph_size=self.option.min_subgraph_size,
+                        precision_mode=precision_map[run_mode],
+                        use_static=self.option.trt_use_static,
+                        use_calib_mode=self.option.trt_calib_mode,
+                    )
+                    config.enable_tuned_tensorrt_dynamic_shape(
+                        self.option.shape_info_filename, True
+                    )
+        elif self.option.device == "npu":
             config.enable_custom_device("npu")
         elif self.option.device_type == "xpu":
             pass
         elif self.option.device_type == "mlu":
             config.enable_custom_device("mlu")
+        elif self.option.device == "dcu":
+            if paddle.is_compiled_with_rocm():
+                # Delete unsupported passes in dcu
+                config.delete_pass("conv2d_add_act_fuse_pass")
+                config.delete_pass("conv2d_add_fuse_pass")
         else:
             assert self.option.device_type == "cpu"
             config.disable_gpu()
@@ -290,28 +360,21 @@ class PaddleInfer(StaticInfer):
             else:
                 if hasattr(config, "disable_mkldnn"):
                     config.disable_mkldnn()
+            config.set_cpu_math_library_num_threads(self.option.cpu_threads)
 
-        if self.option.disable_glog_info:
-            config.disable_glog_info()
+            if hasattr(config, "enable_new_ir"):
+                config.enable_new_ir(self.option.enable_new_ir)
+            if hasattr(config, "enable_new_executor"):
+                config.enable_new_executor()
+            config.set_optimization_level(3)
 
-        config.set_cpu_math_library_num_threads(self.option.cpu_threads)
-
-        if self.option.device_type in ("cpu", "gpu"):
-            if not (self.option.device_type == "gpu" and run_mode.startswith("trt")):
-                if hasattr(config, "enable_new_ir"):
-                    config.enable_new_ir(self.option.enable_new_ir)
-                if hasattr(config, "enable_new_executor"):
-                    config.enable_new_executor()
-                config.set_optimization_level(3)
-
+        config.enable_memory_optim()
         for del_p in self.option.delete_pass:
             config.delete_pass(del_p)
 
-        if self.option.device_type in ("gpu", "dcu"):
-            if paddle.is_compiled_with_rocm():
-                # Delete unsupported passes in dcu
-                config.delete_pass("conv2d_add_act_fuse_pass")
-                config.delete_pass("conv2d_add_fuse_pass")
+        # Disable paddle inference logging
+        if not DEBUG:
+            config.disable_glog_info()
 
         predictor = create_predictor(config)
 
@@ -329,73 +392,96 @@ class PaddleInfer(StaticInfer):
             output_handlers.append(output_handler)
         return predictor, input_handlers, output_handlers
 
-    def _configure_trt(
-        self, config, precision_mode, model_file, params_file, cache_dir
-    ):
-        config.set_optim_cache_dir(str(cache_dir / "optim_cache"))
+    def _configure_trt(self, run_mode, model_file, params_file, cache_dir):
+        if USE_PIR_TRT:
+            trt_save_path = cache_dir / self.model_prefix
+            _convert_trt(
+                run_mode,
+                model_file,
+                params_file,
+                trt_save_path,
+                self.option.trt_dynamic_shapes,
+            )
+            model_file = trt_save_path.with_suffix(".json")
+            params_file = trt_save_path.with_suffix(".pdiparams")
+            config = Config(str(model_file), str(params_file))
+        else:
+            PRECISION_MAP = {
+                "trt_int8": Config.Precision.Int8,
+                "trt_fp32": Config.Precision.Float32,
+                "trt_fp16": Config.Precision.Half,
+            }
 
-        config.enable_tensorrt_engine(
-            workspace_size=self.option.trt_max_workspace_size,
-            max_batch_size=self.option.trt_max_batch_size,
-            min_subgraph_size=self.option.trt_min_subgraph_size,
-            precision_mode=precision_mode,
-            use_static=self.option.trt_use_static,
-            use_calib_mode=self.option.trt_use_calib_mode,
-        )
+            config = Config(str(model_file), str(params_file))
 
-        if self.option.trt_use_dynamic_shapes:
-            if self.option.trt_collect_shape_range_info:
-                # NOTE: We always use a shape range info file.
-                if self.option.trt_shape_range_info_path is not None:
-                    trt_shape_range_info_path = Path(
-                        self.option.trt_shape_range_info_path
-                    )
-                else:
-                    trt_shape_range_info_path = cache_dir / "shape_range_info.pbtxt"
-                should_collect_shape_range_info = True
-                if not trt_shape_range_info_path.exists():
-                    trt_shape_range_info_path.parent.mkdir(parents=True, exist_ok=True)
-                    logging.info(
-                        f"Shape range info will be collected into {trt_shape_range_info_path}"
-                    )
-                elif self.option.trt_discard_cached_shape_range_info:
-                    trt_shape_range_info_path.unlink()
-                    logging.info(
-                        f"The shape range info file ({trt_shape_range_info_path}) has been removed, and the shape range info will be re-collected."
-                    )
-                else:
-                    logging.info(
-                        f"A shape range info file ({trt_shape_range_info_path}) already exists. There is no need to collect the info again."
-                    )
-                    should_collect_shape_range_info = False
-                if should_collect_shape_range_info:
-                    _collect_trt_shape_range_info(
-                        str(model_file),
-                        str(params_file),
-                        self.option.device_id or 0,
-                        str(trt_shape_range_info_path),
-                        self.option.trt_dynamic_shapes,
-                        self.option.trt_dynamic_shape_input_data,
-                    )
-                config.enable_tuned_tensorrt_dynamic_shape(
-                    str(trt_shape_range_info_path),
-                    self.option.trt_allow_rebuild_at_runtime,
-                )
-            else:
-                if self.option.trt_dynamic_shapes is not None:
-                    min_shapes, opt_shapes, max_shapes = {}, {}, {}
-                    for (
-                        key,
-                        shapes,
-                    ) in self.option.trt_dynamic_shapes.items():
-                        min_shapes[key] = shapes[0]
-                        opt_shapes[key] = shapes[1]
-                        max_shapes[key] = shapes[2]
-                        config.set_trt_dynamic_shape_info(
-                            min_shapes, max_shapes, opt_shapes
+            config.set_optim_cache_dir(str(cache_dir / "optim_cache"))
+
+            config.enable_tensorrt_engine(
+                workspace_size=self.option.trt_max_workspace_size,
+                max_batch_size=self.option.trt_max_batch_size,
+                min_subgraph_size=self.option.trt_min_subgraph_size,
+                precision_mode=PRECISION_MAP[run_mode],
+                use_static=self.option.trt_use_static,
+                use_calib_mode=self.option.trt_use_calib_mode,
+            )
+
+            if self.option.trt_use_dynamic_shapes:
+                if self.option.trt_collect_shape_range_info:
+                    # NOTE: We always use a shape range info file.
+                    if self.option.trt_shape_range_info_path is not None:
+                        trt_shape_range_info_path = Path(
+                            self.option.trt_shape_range_info_path
                         )
+                    else:
+                        trt_shape_range_info_path = cache_dir / "shape_range_info.pbtxt"
+                    should_collect_shape_range_info = True
+                    if not trt_shape_range_info_path.exists():
+                        trt_shape_range_info_path.parent.mkdir(
+                            parents=True, exist_ok=True
+                        )
+                        logging.info(
+                            f"Shape range info will be collected into {trt_shape_range_info_path}"
+                        )
+                    elif self.option.trt_discard_cached_shape_range_info:
+                        trt_shape_range_info_path.unlink()
+                        logging.info(
+                            f"The shape range info file ({trt_shape_range_info_path}) has been removed, and the shape range info will be re-collected."
+                        )
+                    else:
+                        logging.info(
+                            f"A shape range info file ({trt_shape_range_info_path}) already exists. There is no need to collect the info again."
+                        )
+                        should_collect_shape_range_info = False
+                    if should_collect_shape_range_info:
+                        _collect_trt_shape_range_info(
+                            str(model_file),
+                            str(params_file),
+                            self.option.device_id or 0,
+                            str(trt_shape_range_info_path),
+                            self.option.trt_dynamic_shapes,
+                            self.option.trt_dynamic_shape_input_data,
+                        )
+                    config.enable_tuned_tensorrt_dynamic_shape(
+                        str(trt_shape_range_info_path),
+                        self.option.trt_allow_rebuild_at_runtime,
+                    )
                 else:
-                    raise RuntimeError("No dynamic shape information provided")
+                    if self.option.trt_dynamic_shapes is not None:
+                        min_shapes, opt_shapes, max_shapes = {}, {}, {}
+                        for (
+                            key,
+                            shapes,
+                        ) in self.option.trt_dynamic_shapes.items():
+                            min_shapes[key] = shapes[0]
+                            opt_shapes[key] = shapes[1]
+                            max_shapes[key] = shapes[2]
+                            config.set_trt_dynamic_shape_info(
+                                min_shapes, max_shapes, opt_shapes
+                            )
+                    else:
+                        raise RuntimeError("No dynamic shape information provided")
+
+        return config
 
 
 class HPInfer(StaticInfer):

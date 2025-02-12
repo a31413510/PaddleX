@@ -17,6 +17,7 @@ from typing import Dict, List
 
 from ...utils import logging
 from ...utils.device import (
+    check_supported_device_type,
     constr_device,
     get_default_device,
     parse_device,
@@ -76,7 +77,6 @@ class PaddlePredictorOption(object):
             "cpu_threads": 8,
             "delete_pass": [],
             "enable_new_ir": True if self.model_name not in NEWIR_BLOCKLIST else False,
-            "disable_glog_info": True,
             "trt_max_workspace_size": 1 << 30,  # only for trt
             "trt_max_batch_size": 32,  # only for trt
             "trt_min_subgraph_size": 3,  # only for trt
@@ -115,6 +115,7 @@ class PaddlePredictorOption(object):
 
     @device_type.setter
     def device_type(self, device_type):
+        check_supported_device_type(device_type, self.model_name)
         self._update("device_type", device_type)
 
     @property
@@ -140,9 +141,9 @@ class PaddlePredictorOption(object):
             raise ValueError(
                 f"The device type must be one of {support_run_mode_str}, but received {repr(device_type)}."
             )
-        self._update("device_type", device_type)
+        self.device_type = device_type
         device_id = device_ids[0] if device_ids is not None else None
-        self._update("device_id", device_id)
+        self.device_id = device_id
         set_env_for_device(device)
         if device_type not in ("cpu"):
             if device_ids is None or len(device_ids) > 1:
