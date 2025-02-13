@@ -143,13 +143,24 @@ def _convert_trt(
         predictor = create_predictor(config)
         return predictor.get_input_names()
 
+    input_names = _get_input_names(pp_model_file, pp_params_file)
+    for name in trt_dynamic_shapes:
+        if name not in input_names:
+            raise ValueError(
+                f"Invalid input name {repr(name)} found in `trt_dynamic_shapes`"
+            )
+    for name in input_names:
+        if name not in trt_dynamic_shapes:
+            raise ValueError(
+                f"Input name {repr(name)} not found in `trt_dynamic_shapes`"
+            )
+
     precision_map = {
         "trt_int8": PrecisionMode.INT8,
         "trt_fp32": PrecisionMode.FP32,
         "trt_fp16": PrecisionMode.FP16,
     }
     trt_inputs = []
-    input_names = _get_input_names(pp_model_file, pp_params_file)
     for name in input_names:
         min_shape, opt_shape, max_shape = trt_dynamic_shapes[name]
         trt_input = Input(
