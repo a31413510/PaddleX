@@ -19,39 +19,17 @@ __all__ = [
     "recursive_img_array2path",
     "get_show_color",
     "sorted_layout_boxes",
-    "convert_bgr2rgb",
 ]
 
 import numpy as np
-import copy
-import cv2
 from PIL import Image
 import uuid
+import re
 from pathlib import Path
 from typing import Optional, Union, List, Tuple, Dict, Any
 from ..ocr.result import OCRResult
 from ...models.object_detection.result import DetResult
 from ..components import convert_points_to_boxes
-
-
-def convert_bgr2rgb(data: Image.Image) -> Image.Image:
-    """
-    Convert BGR image to RGB image.
-
-    Args:
-        data (PIL.Image): The input image data.
-
-    Returns:
-        PIL.Image: The converted RGB image data.
-    """
-    return data
-    original_img_array = np.array(data)
-    if original_img_array.ndim == 3 and original_img_array.shape[2] == 3:
-        res_img_array = original_img_array[:, :, ::-1]
-    else:
-        res_img_array = original_img_array
-    res_img = Image.fromarray(res_img_array)
-    return res_img
 
 
 def get_overlap_boxes_idx(src_boxes: np.ndarray, ref_boxes: np.ndarray) -> List:
@@ -386,6 +364,59 @@ def _sort_ocr_res_by_y_projection(
     return ocr_res
 
 
+def _process_text(input_text: str) -> str:
+    """
+    Process the input text to handle spaces.
+
+    The function removes multiple consecutive spaces between Chinese characters and ensures that
+    only a single space is retained between Chinese and non-Chinese characters.
+
+    Args:
+        input_text (str): The text to be processed.
+
+    Returns:
+        str: The processed text with properly formatted spaces.
+    """
+
+    def handle_spaces_(text: str) -> str:
+        """
+        Handle spaces in the text by removing multiple consecutive spaces and inserting a single space
+        between Chinese and non-Chinese characters.
+
+        Args:
+            text (str): The text to handle spaces for.
+
+        Returns:
+            str: The text with properly formatted spaces.
+        """
+        spaces = re.finditer(r"\s+", text)
+        processed_text = list(text)
+
+        for space in reversed(list(spaces)):
+            start, end = space.span()
+            prev_char = processed_text[start - 1] if start > 0 else ""
+            next_char = processed_text[end] if end < len(processed_text) else ""
+
+            is_prev_chinese = (
+                re.match(r"[\u4e00-\u9fff]", prev_char) if prev_char else False
+            )
+            is_next_chinese = (
+                re.match(r"[\u4e00-\u9fff]", next_char) if next_char else False
+            )
+
+            if is_prev_chinese and is_next_chinese:
+                processed_text[start:end] = []
+            else:
+                processed_text[start:end] = [" "]
+
+        return "".join(processed_text)
+
+    text_without_spaces = handle_spaces_(input_text)
+
+    final_text = re.sub(r"\s+", " ", text_without_spaces).strip()
+    return final_text
+
+
 def get_single_block_parsing_res(
     overall_ocr_res: OCRResult,
     layout_det_res: DetResult,
@@ -451,8 +482,8 @@ def get_single_block_parsing_res(
                 single_block_layout_parsing_res.append(
                     {
                         "block_label": label,
-                        "block_content": ", ".join(
-                            seal_res_list[seal_index]["rec_texts"]
+                        "block_content": _process_text(
+                            ", ".join(seal_res_list[seal_index]["rec_texts"])
                         ),
                         "block_bbox": block_bbox,
                         "seg_start_flag": seg_start_flag,
@@ -493,7 +524,7 @@ def get_single_block_parsing_res(
                 single_block_layout_parsing_res.append(
                     {
                         "block_label": label,
-                        "block_content": "".join(rec_res["rec_texts"]),
+                        "block_content": _process_text("".join(rec_res["rec_texts"])),
                         "block_image": input_img[
                             int(block_bbox[1]) : int(block_bbox[3]),
                             int(block_bbox[0]) : int(block_bbox[2]),
@@ -507,12 +538,24 @@ def get_single_block_parsing_res(
                 single_block_layout_parsing_res.append(
                     {
                         "block_label": label,
-                        "block_content": "".join(rec_res["rec_texts"]),
+                        "block_content": _process_text("".join(rec_res["rec_texts"])),
                         "block_bbox": block_bbox,
                         "seg_start_flag": seg_start_flag,
                         "seg_end_flag": seg_end_flag,
                     },
                 )
+
+    single_block_layout_parsing_res = get_layout_ordering(
+        single_block_layout_parsing_res,
+        no_mask_labels=[
+            "text",
+            "formula",
+            "algorithm",
+            "reference",
+            "content",
+            "abstract",
+        ],
+    )
 
     return single_block_layout_parsing_res
 
@@ -1276,42 +1319,36 @@ def _get_sub_category(
 
 
 def get_layout_ordering(
-    data: List[Dict[str, Any]],
+    parsing_res_list: List[Dict[str, Any]],
     no_mask_labels: List[str] = [],
-    already_sorted: bool = False,
 ) -> None:
     """
     Process layout parsing results to remove overlapping bounding boxes
     and assign an ordering index based on their positions.
 
     Modifies:
-        The 'data' list by adding an 'index' to each block.
+        The 'parsing_res_list' list by adding an 'index' to each block.
 
     Args:
-        data (List[Dict[str, Any]]): List of block dictionaries with 'block_bbox' and 'block_label'.
+        parsing_res_list (List[Dict[str, Any]]): List of block dictionaries with 'block_bbox' and 'block_label'.
         no_mask_labels (List[str]): Labels for which overlapping removal is not performed.
-        already_sorted (bool): Assumes data is already sorted by position if True.
     """
-    if already_sorted:
-        return data
-
     title_text_labels = ["doc_title"]
     title_labels = ["doc_title", "paragraph_title"]
     vision_labels = ["image", "table", "seal", "chart", "figure"]
     vision_title_labels = ["table_title", "chart_title", "figure_title"]
 
-    parsing_result = data
-    parsing_result, _ = _remove_overlap_blocks(
-        parsing_result,
+    parsing_res_list, _ = _remove_overlap_blocks(
+        parsing_res_list,
         threshold=0.5,
         smaller=True,
     )
-    parsing_result = _get_sub_category(parsing_result, title_text_labels)
+    parsing_res_list = _get_sub_category(parsing_res_list, title_text_labels)
 
     doc_flag = False
-    median_width = _get_text_median_width(parsing_result)
-    parsing_result, projection_direction = _get_layout_property(
-        parsing_result,
+    median_width = _get_text_median_width(parsing_res_list)
+    parsing_res_list, projection_direction = _get_layout_property(
+        parsing_res_list,
         median_width,
         no_mask_labels=no_mask_labels,
         threshold=0.3,
@@ -1329,7 +1366,7 @@ def get_layout_ordering(
 
     drop_indexes = []
 
-    for index, block in enumerate(parsing_result):
+    for index, block in enumerate(parsing_res_list):
         label = block["sub_label"]
         block["block_bbox"] = list(map(int, block["block_bbox"]))
 
@@ -1360,15 +1397,15 @@ def get_layout_ordering(
             drop_indexes.append(index)
 
     for index in sorted(drop_indexes, reverse=True):
-        del parsing_result[index]
+        del parsing_res_list[index]
 
-    if len(parsing_result) > 0:
+    if len(parsing_res_list) > 0:
         # single text label
-        if len(double_text_blocks) > len(parsing_result) or projection_direction:
-            parsing_result.extend(title_blocks + double_text_blocks)
+        if len(double_text_blocks) > len(parsing_res_list) or projection_direction:
+            parsing_res_list.extend(title_blocks + double_text_blocks)
             title_blocks = []
             double_text_blocks = []
-            block_bboxes = [block["block_bbox"] for block in parsing_result]
+            block_bboxes = [block["block_bbox"] for block in parsing_res_list]
             block_bboxes.sort(
                 key=lambda x: (
                     x[0] // max(20, median_width),
@@ -1382,7 +1419,7 @@ def get_layout_ordering(
                 min_gap=1,
             )
         else:
-            block_bboxes = [block["block_bbox"] for block in parsing_result]
+            block_bboxes = [block["block_bbox"] for block in parsing_res_list]
             block_bboxes.sort(key=lambda x: (x[0] // 20, x[1]))
             block_bboxes = np.array(block_bboxes)
             sorted_indices = sort_by_xycut(
@@ -1393,7 +1430,7 @@ def get_layout_ordering(
 
         sorted_boxes = block_bboxes[sorted_indices].tolist()
 
-        for block in parsing_result:
+        for block in parsing_res_list:
             block["index"] = sorted_boxes.index(block["block_bbox"]) + 1
             block["sub_index"] = sorted_boxes.index(block["block_bbox"]) + 1
 
@@ -1407,7 +1444,7 @@ def get_layout_ordering(
                 float("inf"),
             ]  # for double text
             nearest_gt_index = 0
-            for match_block in parsing_result:
+            for match_block in parsing_res_list:
                 match_bbox = match_block["block_bbox"]
                 if distance_type == "nearest_iou_edge_distance":
                     distance, min_distance_config = _nearest_iou_edge_distance(
@@ -1491,7 +1528,7 @@ def get_layout_ordering(
             else:
                 block["sub_index"] = nearest_gt_index
 
-            parsing_result.append(block)
+            parsing_res_list.append(block)
 
     # double text label
     double_text_blocks.sort(
@@ -1505,11 +1542,11 @@ def get_layout_ordering(
         double_text_blocks,
         distance_type="nearest_iou_edge_distance",
     )
-    parsing_result.sort(
+    parsing_res_list.sort(
         key=lambda x: (x["index"], x["block_bbox"][1], x["block_bbox"][0]),
     )
 
-    for idx, block in enumerate(parsing_result):
+    for idx, block in enumerate(parsing_res_list):
         block["index"] = idx + 1
         block["sub_index"] = idx + 1
 
@@ -1529,15 +1566,15 @@ def get_layout_ordering(
             label: priority for priority, label in enumerate(text_sort_labels)
         }
         doc_titles = []
-        for i, block in enumerate(parsing_result):
+        for i, block in enumerate(parsing_res_list):
             if block["block_label"] == "doc_title":
                 doc_titles.append(
                     (i, block["block_bbox"][1], block["block_bbox"][0]),
                 )
         doc_titles.sort(key=lambda x: (x[1], x[2]))
         first_doc_title_index = doc_titles[0][0]
-        parsing_result[first_doc_title_index]["index"] = 1
-        parsing_result.sort(
+        parsing_res_list[first_doc_title_index]["index"] = 1
+        parsing_res_list.sort(
             key=lambda x: (
                 x["index"],
                 text_label_priority.get(x["block_label"], 9999),
@@ -1546,7 +1583,7 @@ def get_layout_ordering(
             ),
         )
     else:
-        parsing_result.sort(
+        parsing_res_list.sort(
             key=lambda x: (
                 x["index"],
                 x["block_bbox"][1],
@@ -1554,7 +1591,7 @@ def get_layout_ordering(
             ),
         )
 
-    for idx, block in enumerate(parsing_result):
+    for idx, block in enumerate(parsing_res_list):
         block["index"] = idx + 1
         block["sub_index"] = idx + 1
 
@@ -1564,7 +1601,7 @@ def get_layout_ordering(
     text_label_priority = {
         label: priority for priority, label in enumerate(text_sort_labels)
     }
-    parsing_result.sort(
+    parsing_res_list.sort(
         key=lambda x: (
             x["index"],
             text_label_priority.get(x["sub_label"], 9999),
@@ -1573,7 +1610,7 @@ def get_layout_ordering(
         ),
     )
 
-    for idx, block in enumerate(parsing_result):
+    for idx, block in enumerate(parsing_res_list):
         block["index"] = idx + 1
         block["sub_index"] = idx + 1
 
@@ -1583,7 +1620,7 @@ def get_layout_ordering(
         distance_type="nearest_iou_edge_distance",
         is_add_index=False,
     )
-    parsing_result.sort(
+    parsing_res_list.sort(
         key=lambda x: (
             x["sub_index"],
             x["block_bbox"][1],
@@ -1591,7 +1628,7 @@ def get_layout_ordering(
         ),
     )
 
-    for idx, block in enumerate(parsing_result):
+    for idx, block in enumerate(parsing_res_list):
         block["sub_index"] = idx + 1
 
     # image,figure,chart,seal title label
@@ -1600,7 +1637,7 @@ def get_layout_ordering(
         distance_type="nearest_iou_edge_distance",
         is_add_index=False,
     )
-    parsing_result.sort(
+    parsing_res_list.sort(
         key=lambda x: (
             x["sub_index"],
             x["block_bbox"][1],
@@ -1608,7 +1645,7 @@ def get_layout_ordering(
         ),
     )
 
-    for idx, block in enumerate(parsing_result):
+    for idx, block in enumerate(parsing_res_list):
         block["sub_index"] = idx + 1
 
     # vision footnote label
@@ -1618,7 +1655,7 @@ def get_layout_ordering(
         is_add_index=False,
     )
     text_label_priority = {"vision_footnote": 9999}
-    parsing_result.sort(
+    parsing_res_list.sort(
         key=lambda x: (
             x["sub_index"],
             text_label_priority.get(x["sub_label"], 0),
@@ -1627,13 +1664,28 @@ def get_layout_ordering(
         ),
     )
 
-    for idx, block in enumerate(parsing_result):
+    for idx, block in enumerate(parsing_res_list):
         block["sub_index"] = idx + 1
 
     # header、footnote、header_image... label
     nearest_match_(other_blocks, distance_type="manhattan", is_add_index=False)
 
-    return data
+    parsing_res_list = [
+        {
+            "block_label": parsing_res["block_label"],
+            "block_content": parsing_res["block_content"],
+            "block_bbox": parsing_res["block_bbox"],
+            "block_image": parsing_res.get("block_image", None),
+            "seg_start_flag": parsing_res["seg_start_flag"],
+            "seg_end_flag": parsing_res["seg_end_flag"],
+            "sub_label": parsing_res["sub_label"],
+            "sub_index": parsing_res["sub_index"],
+            "index": parsing_res.get("index", None),
+        }
+        for parsing_res in parsing_res_list
+    ]
+
+    return parsing_res_list
 
 
 def _manhattan_distance(

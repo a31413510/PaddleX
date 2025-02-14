@@ -16,9 +16,7 @@ from __future__ import annotations
 import copy
 from pathlib import Path
 from PIL import Image, ImageDraw
-from typing import Dict
 
-import cv2
 import re
 import numpy as np
 from PIL import Image
@@ -29,13 +27,11 @@ from ...common.result import (
     HtmlMixin,
     JsonMixin,
     MarkdownMixin,
-    StrMixin,
     XlsxMixin,
 )
 from .utils import get_layout_ordering
 from .utils import recursive_img_array2path
 from .utils import get_show_color
-from .utils import convert_bgr2rgb
 
 
 class LayoutParsingResultV2(BaseCVResult, HtmlMixin, XlsxMixin, MarkdownMixin):
@@ -48,7 +44,6 @@ class LayoutParsingResultV2(BaseCVResult, HtmlMixin, XlsxMixin, MarkdownMixin):
         XlsxMixin.__init__(self)
         MarkdownMixin.__init__(self)
         JsonMixin.__init__(self)
-        self.already_sorted = False
 
     def _get_input_fn(self):
         fn = super()._get_input_fn()
@@ -62,18 +57,13 @@ class LayoutParsingResultV2(BaseCVResult, HtmlMixin, XlsxMixin, MarkdownMixin):
     def _to_img(self) -> dict[str, np.ndarray]:
         res_img_dict = {}
         model_settings = self["model_settings"]
-        page_index = self["page_index"]
         if model_settings["use_doc_preprocessor"]:
             for key, value in self["doc_preprocessor_res"].img.items():
                 res_img_dict[key] = value
-        res_img_dict["layout_det_res"] = convert_bgr2rgb(
-            self["layout_det_res"].img["res"]
-        )
+        res_img_dict["layout_det_res"] = self["layout_det_res"].img["res"]
 
         if model_settings["use_general_ocr"] or model_settings["use_table_recognition"]:
-            res_img_dict["overall_ocr_res"] = convert_bgr2rgb(
-                self["overall_ocr_res"].img["ocr_res_img"]
-            )
+            res_img_dict["overall_ocr_res"] = self["overall_ocr_res"].img["ocr_res_img"]
 
         if model_settings["use_table_recognition"] and len(self["table_res_list"]) > 0:
             table_cell_img = Image.fromarray(
@@ -103,21 +93,6 @@ class LayoutParsingResultV2(BaseCVResult, HtmlMixin, XlsxMixin, MarkdownMixin):
         image = Image.fromarray(self["doc_preprocessor_res"]["output_img"])
         draw = ImageDraw.Draw(image, "RGBA")
         parsing_result = self["parsing_res_list"]
-
-        if self.already_sorted == False:
-            parsing_result = get_layout_ordering(
-                parsing_result,
-                no_mask_labels=[
-                    "text",
-                    "formula",
-                    "algorithm",
-                    "reference",
-                    "content",
-                    "abstract",
-                ],
-                already_sorted=self.already_sorted,
-            )
-
         for block in parsing_result:
             bbox = block["block_bbox"]
             index = block.get("index", None)
@@ -128,7 +103,6 @@ class LayoutParsingResultV2(BaseCVResult, HtmlMixin, XlsxMixin, MarkdownMixin):
                 text_position = (bbox[2] + 2, bbox[1] - 10)
                 draw.text(text_position, str(index), fill="red")
 
-        self.already_sorted = True
         res_img_dict["layout_order_res"] = image
 
         return res_img_dict
@@ -264,23 +238,6 @@ class LayoutParsingResultV2(BaseCVResult, HtmlMixin, XlsxMixin, MarkdownMixin):
         Returns:
             Dict
         """
-
-        parsing_result = self["parsing_res_list"]
-        if self.already_sorted == False:
-            parsing_result = get_layout_ordering(
-                parsing_result,
-                no_mask_labels=[
-                    "text",
-                    "formula",
-                    "algorithm",
-                    "reference",
-                    "content",
-                    "abstract",
-                ],
-                already_sorted=self.already_sorted,
-            )
-        self.already_sorted == True
-
         recursive_img_array2path(self["parsing_res_list"], labels=["block_image"])
 
         def _format_data(obj):
@@ -343,7 +300,6 @@ class LayoutParsingResultV2(BaseCVResult, HtmlMixin, XlsxMixin, MarkdownMixin):
                 "text": lambda: block["block_content"]
                 .replace("-\n", " ")
                 .replace("\n", " "),
-                # 'number': lambda: str(block['number']),
                 "abstract": lambda: block["block_content"]
                 .replace("-\n", " ")
                 .replace("\n", " "),
@@ -354,7 +310,6 @@ class LayoutParsingResultV2(BaseCVResult, HtmlMixin, XlsxMixin, MarkdownMixin):
                 "chart": lambda: format_image("block_image"),
                 "formula": lambda: f"$${block['block_content']}$$",
                 "table": format_table,
-                # "reference": format_reference,
                 "reference": lambda: block["block_content"],
                 "algorithm": lambda: block["block_content"].strip("\n"),
                 "seal": lambda: format_image("block_content"),
