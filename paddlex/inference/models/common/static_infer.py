@@ -473,6 +473,8 @@ class PaddleInfer(StaticInfer):
         return config
 
 
+# TODO: It would be better to refactor the code to make `HPInfer` a higher-level
+# class that uses `PaddleInfer`.
 class HPInfer(StaticInfer):
     def __init__(
         self,
