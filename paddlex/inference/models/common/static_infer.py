@@ -138,7 +138,7 @@ def _convert_trt(
 
     def _get_input_names(model_file, params_file):
         # HACK
-        config = Config(model_file, params_file)
+        config = Config(str(model_file), str(params_file))
         config.disable_glog_info()
         predictor = create_predictor(config)
         return predictor.get_input_names()
@@ -383,7 +383,7 @@ class PaddleInfer(StaticInfer):
 
     def _configure_trt(self, run_mode, model_file, params_file, cache_dir):
         if USE_PIR_TRT:
-            trt_save_path = cache_dir / "trt" / self.model_prefix
+            trt_save_path = cache_dir / "trt" / self.model_file_prefix
             _convert_trt(
                 run_mode,
                 model_file,
