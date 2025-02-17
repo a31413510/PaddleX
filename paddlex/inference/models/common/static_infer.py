@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import abc
+import importlib.util
 import subprocess
 from typing import Union, Sequence, Tuple, List
 from pathlib import Path
@@ -313,7 +314,7 @@ class PaddleInfer(StaticInfer):
 
         if self.option.device == "gpu":
             config.exp_disable_mixed_precision_ops({"feed", "fetch"})
-            config.enable_use_gpu(100, self.option.device_id)
+            config.enable_use_gpu(100, self.option.device_id or 0)
             if not run_mode.startswith("trt"):
                 if hasattr(config, "enable_new_ir"):
                     config.enable_new_ir(self.option.enable_new_ir)
@@ -327,7 +328,7 @@ class PaddleInfer(StaticInfer):
         elif self.option.device_type == "mlu":
             config.enable_custom_device("mlu")
         elif self.option.device == "dcu":
-            config.enable_use_gpu(100, self.option.device_id)
+            config.enable_use_gpu(100, self.option.device_id or 0)
             # XXX: is_compiled_with_rocm() must be True on dcu platform ?
             if paddle.is_compiled_with_rocm():
                 # Delete unsupported passes in dcu
@@ -521,9 +522,18 @@ class HPInfer(StaticInfer):
         )
 
         model_paths = get_model_paths(self._model_dir, self._model_file_prefix)
-        is_onnx_model_available = "onnx" in model_paths or (
-            self._config.auto_paddle2onnx and "paddle" in model_paths
-        )
+        is_onnx_model_available = "onnx" in model_paths
+        # TODO: Give a warning if Paddle2ONNX is not available but can be used
+        # to select a better backend.
+        if self._config.auto_paddle2onnx:
+            if self._check_paddle2onnx():
+                is_onnx_model_available = (
+                    is_onnx_model_available or "paddle" in model_paths
+                )
+            else:
+                logging.debug(
+                    "The Paddle2ONNX plugin is not properly installed. Automatic model conversion will not be performed."
+                )
         available_backends = []
         if "paddle" in model_paths:
             available_backends.append("paddle")
@@ -639,10 +649,9 @@ class HPInfer(StaticInfer):
                 if self._config.auto_paddle2onnx:
                     if "paddle" not in model_paths:
                         raise RuntimeError("Paddle model required")
-                    # TODO: Check if the paddle2onnx plugin is properly installed.
                     # The CLI is used here since there is currently no API.
                     logging.info("Automatically converting Paddle model to ONNX format")
-                    subprocess.run(
+                    subprocess.check_call(
                         [
                             "paddlex",
                             "--paddle2onnx",
@@ -725,3 +734,7 @@ class HPInfer(StaticInfer):
             inputs[input_name] = input_
         outputs = self._ui_runtime.infer(inputs)
         return outputs
+
+    def _check_paddle2onnx(self):
+        # HACK
+        return importlib.util.find_spec("paddle2onnx") is not None

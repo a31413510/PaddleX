@@ -23,7 +23,6 @@ from pydantic import BaseModel, Field
 from typing_extensions import Annotated, TypeAlias
 
 from ...utils.flags import FLAGS_json_format_model
-from .pp_option import PaddlePredictorOption
 
 
 class PaddleInferenceInfo(BaseModel):
