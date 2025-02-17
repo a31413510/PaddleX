@@ -153,6 +153,7 @@ from .c_lib_wrap import (
     is_built_with_trt,
     get_default_cuda_directory,
     is_built_with_openvino,
+    is_built_with_om,
 )
 
 
