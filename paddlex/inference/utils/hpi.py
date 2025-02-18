@@ -159,7 +159,6 @@ def suggest_inference_backend_and_config(
         else:
             return None, f"{repr(arch)} is not a supported architecture."
     elif hpi_config.device_type == "gpu":
-        # Currently only NVIDIA GPUs are supported.
         # FIXME: We should not rely on the PaddlePaddle library to detemine CUDA
         # and cuDNN versions.
         # Should we inject environment info from the outside?
