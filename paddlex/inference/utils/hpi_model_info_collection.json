@@ -1707,58 +1707,58 @@
       "tensorrt"
     ],
     "PP-OCRv4_mobile_rec": [
-      "paddle"
+      "padpaddle_tensorrt_fp16dle"
     ],
     "PP-OCRv4_server_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "ch_SVTRv2_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "ch_RepSVTR_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "PP-OCRv4_server_rec_doc": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "ta_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "latin_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "chinese_cht_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "ka_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "korean_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "en_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "devanagari_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "te_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "en_PP-OCRv4_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "arabic_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "japan_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "cyrillic_PP-OCRv3_mobile_rec": [
-      "paddle"
+      "paddle_tensorrt_fp16"
     ],
     "AutoEncoder_ad": [
       "onnxruntime",
