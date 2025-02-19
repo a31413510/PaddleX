@@ -41,9 +41,25 @@ PaddleX 3.0 是基于飞桨框架构建的低代码开发工具，它集成了�
 
 ## 📣 近期更新
 
-🔥🔥 **2024.11.15**，PaddleX 3.0 Beta2 开源版正式发布，全面适配 PaddlePaddle 3.0b2 版本。**新增通用图像识别、人脸识别、车辆属性识别和行人属性识别产线，同时新增 42 个模型开发全流程适配昇腾 910B，并全面支持[GitHub 站点文档](https://paddlepaddle.github.io/PaddleX/latest/index.html)。**
+🔥🔥 **2025.2.14**，PaddleX v3.0.0rc0 重磅升级。本次版本全面适配 PaddlePaddle 3.0rc0，核心升级如下：
 
-🔥🔥 **2024.9.30**，PaddleX 3.0 Beta1 开源版正式发布，提供 **200+ 模型** 通过极简的 Python API 一键调用；实现基于统一命令的模型全流程开发，并开源 **PP-ChatOCRv3** 特色模型产线基础能力；支持 **100+ 模型高性能推理和服务化部署**（持续迭代中），**4条模型产线8个重点视觉模型端侧部署**；**100+ 模型开发全流程适配昇腾 910B**，**39+ 模型开发全流程适配昆仑芯和寒武纪**。
+- 新增 12 条高价值产线，重磅推出自研 **[版面解析v2产线](docs/pipeline_usage/tutorials/ocr_pipelines/layout_parsing_v2.md)**、**[PP-ChatOCRv4-doc产线](docs/pipeline_usage/tutorials/information_extraction_pipelines/document_scene_information_extraction_v4.md)**、**[表格识别v2产线](docs/pipeline_usage/tutorials/ocr_pipelines/table_recognition_v2.md)**。此外新增了文档处理、旋转框检测、开放词汇检测/分割、视频分析、多语种语音识别、3D 等场景的产线。
+
+- 扩充 48 个前沿模型，包括重磅推出的 OCR 领域的**版面区域检测模型 [PP-DocLayout](docs/module_usage/tutorials/ocr_modules/layout_detection.md)**、**公式识别模型 [PP-FormulaNet](docs/module_usage/tutorials/ocr_modules/formula_recognition.md)**，**表格结构识别模型 [SLANeXt](docs/module_usage/tutorials/ocr_modules/table_structure_recognition.md)**，**文本识别模型 [PP-OCRv4_server_rec_doc](docs/module_usage/tutorials/ocr_modules/text_recognition.md)**。CV 领域的 3D 检测、人体关键点、开放词汇检测/分割模型，以及语音识别领域的 Whisper 系列等模型。
+
+- 优化和升级模型和产线的推理 API，支持更多参数的配置，提升模型和产线推理的灵活性，[详情](docs/API_change_log/v3.0.0rc.md)。
+
+- 多硬件支持扩展：新增燧原 GCU 支持（90+模型），昇腾 NPU/昆仑芯 XPU/寒武纪 MLU/海光 DCU 模型数量显著提升。
+
+- 全场景部署能力升级：
+  - 高性能推理支持一键安装、Windows 系统及 220+ 模型，核心库 ultra-infer 开源；
+  - 服务化部署新增高稳定性方案，支持动态配置优化。
+
+- 系统兼容性增强：适配 Windows 训练/推理，全面支持 Python 3.11/3.12。
+
+🔥 **2024.11.15**，PaddleX 3.0 Beta2 开源版正式发布，全面适配 PaddlePaddle 3.0b2 版本。**新增通用图像识别、人脸识别、车辆属性识别和行人属性识别产线，同时新增 42 个模型开发全流程适配昇腾 910B，并全面支持[GitHub 站点文档](https://paddlepaddle.github.io/PaddleX/latest/index.html)。**
+
+🔥 **2024.9.30**，PaddleX 3.0 Beta1 开源版正式发布，提供 **200+ 模型** 通过极简的 Python API 一键调用；实现基于统一命令的模型全流程开发，并开源 **PP-ChatOCRv3** 特色模型产线基础能力；支持 **100+ 模型高性能推理和服务化部署**（持续迭代中），**4条模型产线8个重点视觉模型端侧部署**；**100+ 模型开发全流程适配昇腾 910B**，**39+ 模型开发全流程适配昆仑芯和寒武纪**。
 
 
 🔥 **2024.6.27**，PaddleX 3.0 Beta 开源版正式发布，支持以低代码的方式在本地端使用多种主流硬件进行产线和模型开发。
@@ -149,7 +165,7 @@ PaddleX的各个产线均支持本地**快速推理**，部分模型支持在[AI
         <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/time_series_forecasting.html">时序预测</a></td>
         <td><a href = "https://aistudio.baidu.com/community/app/105706/webUI?source=appMineRecent">链接</a></td>
         <td>✅</td>
-        <td>🚧</td>
+        <td>✅</td>
         <td>✅</td>
         <td>🚧</td>
         <td>✅</td>
@@ -159,7 +175,7 @@ PaddleX的各个产线均支持本地**快速推理**，部分模型支持在[AI
         <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/time_series_anomaly_detection.html">时序异常检测</a></td>
         <td><a href = "https://aistudio.baidu.com/community/app/105708/webUI?source=appMineRecent">链接</a></td>
         <td>✅</td>
-        <td>🚧</td>
+        <td>✅</td>
         <td>✅</td>
         <td>🚧</td>
         <td>✅</td>
@@ -169,7 +185,7 @@ PaddleX的各个产线均支持本地**快速推理**，部分模型支持在[AI
         <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/time_series_classification.html">时序分类</a></td>
         <td><a href = "https://aistudio.baidu.com/community/app/105707/webUI?source=appMineRecent">链接</a></td>
         <td>✅</td>
-        <td>🚧</td>
+        <td>✅</td>
         <td>✅</td>
         <td>🚧</td>
         <td>✅</td>
@@ -195,97 +211,7 @@ PaddleX的各个产线均支持本地**快速推理**，部分模型支持在[AI
         <td>✅</td>
         <td>✅</td>
     </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/image_anomaly_detection.html">图像异常检测</a></td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>🚧</td>
-    </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/human_keypoint_detection.html">人体关键点检测</a></td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>🚧</td>
-    </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/open_vocabulary_detection.html">开放词汇检测</a></td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>🚧</td>
-        <td>🚧</td>
-    </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/open_vocabulary_segmentation.html">开放词汇分割</a></td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>🚧</td>
-        <td>🚧</td>
-    </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/rotated_object_detection.html">旋转目标检测</a></td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>🚧</td>
-    </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/3d_bev_detection.html">3D多模态融合检测</a></td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>🚧</td>
-    </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/table_recognition_v2.html">通用表格识别v2</a></td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>🚧</td>
-    </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/layout_parsing.html">通用版面解析</a></td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>🚧</td>
-    </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/layout_parsing_v2.html">通用版面解析v2</a></td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>🚧</td>
-        <td>🚧</td>
-    </tr>
-    <tr>
+        <tr>
         <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/formula_recognition.html">公式识别</a></td>
         <td><a href = "https://aistudio.baidu.com/community/app/387976/webUI?source=appCenter">链接</a></td>
         <td>✅</td>
@@ -305,10 +231,120 @@ PaddleX的各个产线均支持本地**快速推理**，部分模型支持在[AI
         <td>✅</td>
         <td>✅</td>
     </tr>
+        <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/pedestrian_attribute_recognition.html">行人属性识别</a></td>
+        <td><a href = "https://aistudio.baidu.com/community/app/387978/webUI?source=appCenter">链接</a></td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/vehicle_attribute_recognition.html">车辆属性识别</a></td>
+        <td><a href = "https://aistudio.baidu.com/community/app/387979/webUI?source=appCenter">链接</a></td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/image_anomaly_detection.html">图像异常检测</a></td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>🚧</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/human_keypoint_detection.html">人体关键点检测</a></td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>🚧</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/open_vocabulary_detection.html">开放词汇检测</a></td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>🚧</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/open_vocabulary_segmentation.html">开放词汇分割</a></td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>🚧</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/rotated_object_detection.html">旋转目标检测</a></td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>🚧</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/3d_bev_detection.html">3D多模态融合检测</a></td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>🚧</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/table_recognition_v2.html">通用表格识别v2</a></td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>🚧</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/layout_parsing.html">通用版面解析</a></td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>🚧</td>
+    </tr>
+    <tr>
+        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/layout_parsing_v2.html">通用版面解析v2</a></td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>✅</td>
+        <td>✅</td>
+        <td>🚧</td>
+        <td>🚧</td>
+        <td>🚧</td>
+    </tr>
     <tr>
         <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/doc_preprocessor.html">文档图像预处理</a></td>
         <td>🚧</td>
-        <td>✅</td>
+        <td>🚧</td>
         <td>✅</td>
         <td>✅</td>
         <td>🚧</td>
@@ -326,26 +362,6 @@ PaddleX的各个产线均支持本地**快速推理**，部分模型支持在[AI
         <td>🚧</td>
     </tr>
     <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/pedestrian_attribute_recognition.html">行人属性识别</a></td>
-        <td><a href = "https://aistudio.baidu.com/community/app/387978/webUI?source=appCenter">链接</a></td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-    </tr>
-    <tr>
-        <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/vehicle_attribute_recognition.html">车辆属性识别</a></td>
-        <td><a href = "https://aistudio.baidu.com/community/app/387979/webUI?source=appCenter">链接</a></td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>🚧</td>
-        <td>✅</td>
-        <td>✅</td>
-    </tr>
-    <tr>
         <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/face_recognition.html">人脸识别</a></td>
         <td>🚧</td>
         <td>✅</td>
@@ -358,7 +374,7 @@ PaddleX的各个产线均支持本地**快速推理**，部分模型支持在[AI
     <tr>
         <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/speech_pipelines/multilingual_speech_recognition.html">多语种语音识别</a></td>
         <td>🚧</td>
-        <td>✅</td>
+        <td>🚧</td>
         <td>✅</td>
         <td>✅</td>
         <td>🚧</td>
@@ -368,7 +384,7 @@ PaddleX的各个产线均支持本地**快速推理**，部分模型支持在[AI
     <tr>
         <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/video_pipelines/video_classification.html">通用视频分类</a></td>
         <td>🚧</td>
-        <td>✅</td>
+        <td>🚧</td>
         <td>✅</td>
         <td>✅</td>
         <td>🚧</td>
@@ -378,7 +394,7 @@ PaddleX的各个产线均支持本地**快速推理**，部分模型支持在[AI
     <tr>
         <td><a href="https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/video_pipelines/video_detection.html">通用视频检测</a></td>
         <td>🚧</td>
-        <td>✅</td>
+        <td>🚧</td>
         <td>✅</td>
         <td>✅</td>
         <td>🚧</td>
@@ -592,23 +608,34 @@ paddlex --pipeline OCR \
 
 | 产线名称           | 使用命令                                                                                                                                                                                    |
 |--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 通用图像分类       | `paddlex --pipeline image_classification --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_image_classification_001.jpg --device gpu:0`                    |
-| 通用目标检测       | `paddlex --pipeline object_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_object_detection_002.png --device gpu:0`                            |
-| 通用实例分割       | `paddlex --pipeline instance_segmentation --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_instance_segmentation_004.png --device gpu:0`                  |
-| 通用语义分割       | `paddlex --pipeline semantic_segmentation --input https://paddle-model-ecology.bj.bcebos.com/paddlex/PaddleX3.0/application/semantic_segmentation/makassaridn-road_demo.png --device gpu:0` |
-| 图像多标签分类 | `paddlex --pipeline multi_label_image_classification --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_image_classification_001.jpg --device gpu:0`        |
-| 小目标检测         | `paddlex --pipeline small_object_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/small_object_detection.jpg --device gpu:0`                            |
-| 图像异常检测       | `paddlex --pipeline anomaly_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/uad_grid.png --device gpu:0`                                              |
-| 行人属性识别       | `paddlex --pipeline pedestrian_attribute_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/pedestrian_attribute_002.jpg --device gpu:0`                                              |
-| 车辆属性识别       | `paddlex --pipeline vehicle_attribute_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/vehicle_attribute_002.jpg --device gpu:0`                                              |
-| 通用OCR            | `paddlex --pipeline OCR --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_ocr_002.png --device gpu:0`                                                      |
-| 通用表格识别       | `paddlex --pipeline table_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/table_recognition.jpg --device gpu:0`                                      |
-| 通用版面解析       | `paddlex --pipeline layout_parsing --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/demo_paper.png --device gpu:0`                                      |
-| 公式识别       | `paddlex --pipeline formula_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/demo_image/general_formula_recognition.png --device gpu:0`                                      |
-| 印章文本识别       | `paddlex --pipeline seal_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/seal_text_det.png --device gpu:0`                                      |
-| 时序预测       | `paddlex --pipeline ts_fc --input https://paddle-model-ecology.bj.bcebos.com/paddlex/ts/demo_ts/ts_fc.csv --device gpu:0`                                                                   |
-| 时序异常检测   | `paddlex --pipeline ts_ad --input https://paddle-model-ecology.bj.bcebos.com/paddlex/ts/demo_ts/ts_ad.csv --device gpu:0`                                                                    |
-| 时序分类       | `paddlex --pipeline ts_cls --input https://paddle-model-ecology.bj.bcebos.com/paddlex/ts/demo_ts/ts_cls.csv --device gpu:0`                                                                 |
+| 通用图像分类       | `paddlex --pipeline image_classification --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_image_classification_001.jpg --device gpu:0 --save_path ./output/`                    |
+| 通用目标检测       | `paddlex --pipeline object_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_object_detection_002.png --threshold 0.5 --save_path ./output/ --device gpu:0`                            |
+| 通用实例分割       | `paddlex --pipeline instance_segmentation --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_instance_segmentation_004.png --threshold 0.5 --save_path ./output --device gpu:0`                  |
+| 通用语义分割       | `paddlex --pipeline semantic_segmentation --input https://paddle-model-ecology.bj.bcebos.com/paddlex/PaddleX3.0/application/semantic_segmentation/makassaridn-road_demo.png --target_size -1 --save_path ./output --device gpu:0` |
+| 图像多标签分类 | `paddlex --pipeline image_multilabel_classification --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_image_classification_001.jpg --save_path ./output --device gpu:0`        |
+| 小目标检测         | `paddlex --pipeline small_object_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/small_object_detection.jpg --threshold 0.5 --save_path ./output --device gpu:0`                            |
+| 图像异常检测       | `paddlex --pipeline anomaly_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/uad_grid.png --save_path ./output --device gpu:0`                                              |
+| 行人属性识别       | `paddlex --pipeline pedestrian_attribute_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/pedestrian_attribute_002.jpg --save_path ./output/ --device gpu:0`                                              |
+| 车辆属性识别       | `paddlex --pipeline vehicle_attribute_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/vehicle_attribute_002.jpg --save_path ./output/ --device gpu:0`                                              |
+| 3D多模态融合检测       | `paddlex --pipeline 3d_bev_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/det_3d/demo_det_3d/nuscenes_demo_infer.tar --device gpu:0 --save_path ./output/`                    |
+| 人体关键点检测      | `paddlex --pipeline human_keypoint_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/keypoint_detection_001.jpg --det_threshold 0.5 --save_path ./output/ --device gpu:0`                    |
+| 开放词汇检测       | `paddlex --pipeline open_vocabulary_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/open_vocabulary_detection.jpg --prompt "bus . walking man . rearview mirror ." --thresholds "{'text_threshold': 0.25, 'box_threshold': 0.3}" --save_path ./output --device gpu:0`                    |
+| 开放词汇分割       | `paddlex --pipeline open_vocabulary_segmentation --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/open_vocabulary_segmentation.jpg --prompt_type box --prompt "[[112.9,118.4,513.8,382.1],[4.6,263.6,92.2,336.6],[592.4,260.9,607.2,294.2]]" --save_path ./output --device gpu:0`                    |
+| 旋转目标检测       | `paddlex --pipeline rotated_object_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/rotated_object_detection_001.png --threshold 0.5 --save_path ./output --device gpu:0`                    |
+| 通用OCR            | `paddlex --pipeline OCR --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/general_ocr_002.png --use_doc_orientation_classify False --use_doc_unwarping False --use_textline_orientation False --save_path ./output --device gpu:0`                                                      |
+| 文档图像预处理            | `paddlex --pipeline doc_preprocessor --input https://paddle-model-ecology.bj.bcebos.com/paddlex/demo_image/doc_test_rotated.jpg --use_doc_orientation_classify True --use_doc_unwarping True --save_path ./output --device gpu:0`                                                      |
+| 通用表格识别       | `paddlex --pipeline table_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/table_recognition.jpg --save_path ./output --device gpu:0`                                      |
+| 通用表格识别v2       | `paddlex --pipeline table_recognition_v2 --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/table_recognition.jpg --save_path ./output --device gpu:0`                                      |
+| 通用版面解析       | `paddlex --pipeline layout_parsing --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/demo_paper.png --use_doc_orientation_classify False --use_doc_unwarping False --use_textline_orientation False --save_path ./output --device gpu:0`                                      |
+| 通用版面解析v2       | `paddlex --pipeline layout_parsing_v2 --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/layout_parsing_v2_demo.png --use_doc_orientation_classify False --use_doc_unwarping False --use_textline_orientation False --save_path ./output --device gpu:0`                                      |
+| 公式识别       | `paddlex --pipeline formula_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/demo_image/general_formula_recognition.png --use_layout_detection True --use_doc_orientation_classify False --use_doc_unwarping False --layout_threshold 0.5 --layout_nms True --layout_unclip_ratio  1.0 --layout_merge_bboxes_mode large --save_path ./output --device gpu:0`                                      |
+| 印章文本识别       | `paddlex --pipeline seal_recognition --input https://paddle-model-ecology.bj.bcebos.com/paddlex/imgs/demo_image/seal_text_det.png --use_doc_orientation_classify False --use_doc_unwarping False --device gpu:0 --save_path ./output`                                      |
+| 时序预测       | `paddlex --pipeline ts_forecast --input https://paddle-model-ecology.bj.bcebos.com/paddlex/ts/demo_ts/ts_fc.csv --device gpu:0 --save_path ./output`                                                                   |
+| 时序异常检测   | `paddlex --pipeline ts_anomaly_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/ts/demo_ts/ts_ad.csv --device gpu:0 --save_path ./output`                                                                    |
+| 时序分类       | `paddlex --pipeline ts_classification --input https://paddle-model-ecology.bj.bcebos.com/paddlex/ts/demo_ts/ts_cls.csv --device gpu:0 --save_path ./output`                                                                 |
+| 多语种语音识别       | `paddlex --pipeline multilingual_speech_recognition --input https://paddlespeech.bj.bcebos.com/PaddleAudio/zh.wav --save_path ./output --device gpu:0`                                      |
+| 通用视频分类       | `paddlex --pipeline video_classification --input https://paddle-model-ecology.bj.bcebos.com/paddlex/videos/demo_video/general_video_classification_001.mp4 --topk 5 --save_path ./output --device gpu:0`                     |
+| 通用视频检测       | `paddlex --pipeline video_detection --input https://paddle-model-ecology.bj.bcebos.com/paddlex/videos/demo_video/HorseRiding.avi --device gpu:0 --save_path ./output`                     |
 
 
 </details>
@@ -650,14 +677,25 @@ for res in output:
 | 人脸识别       | `face_recognition`                | [人脸识别Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/face_recognition.html#22-python脚本方式集成)                              |
 | 车辆属性识别       | `vehicle_attribute_recognition`                | [车辆属性识别产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/vehicle_attribute_recognition.html#22-python脚本方式集成)                              |
 | 行人属性识别       | `pedestrian_attribute_recognition`                | [行人属性识别产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/pedestrian_attribute_recognition.html#22-python脚本方式集成)                              |
+| 3D多模态融合检测       | `3d_bev_detection`             | [3D多模态融合检测产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/3d_bev_detection.html#222-python脚本方式集成)                                |
+| 人体关键点检测       | `human_keypoint_detection`             | [人体关键点检测产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/human_keypoint_detection.html#222-python脚本方式集成)                       |
+| 开放词汇检测       | `open_vocabulary_detection`             | [开放词汇检测产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/open_vocabulary_detection.html#212-python脚本方式集成)                                |
+| 开放词汇分割       | `open_vocabulary_segmentation`             | [开放词汇分割产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/open_vocabulary_segmentation.html#212-python脚本方式集成)                     |
+| 旋转目标检测       | `rotated_object_detection`             | [旋转目标检测产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/cv_pipelines/rotated_object_detection.html#212-python脚本方式集成)                                |
 | 通用OCR            | `OCR`                              | [通用OCR产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/OCR.html#222-python脚本方式集成)                                                     |
+| 文档图像预处理            | `doc_preprocessor`                              | [文档图像预处理产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/doc_preprocessor.html#212-python脚本方式集成)                       |
 | 通用表格识别       | `table_recognition`                | [通用表格识别产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/table_recognition.html#22-python脚本方式集成)                                   |
+| 通用表格识别v2      | `table_recognition_v2`                | [通用表格识别v2产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/table_recognition_v2.html#22-python脚本方式集成)                                   |
 | 通用版面解析       | `layout_parsing`                | [通用版面解析产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/layout_parsing.html#22-python脚本方式集成)                                   |
+| 通用版面解析v2      | `layout_parsing_v2`                | [通用版面解析v2产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/layout_parsing_v2.html#22-python脚本方式集成)                                   |
 | 公式识别       | `formula_recognition`                | [公式识别产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/formula_recognition.html#22-python脚本方式集成)                                   |
 | 印章文本识别       | `seal_recognition`                | [印章文本识别产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/ocr_pipelines/seal_recognition.html#22-python脚本方式集成)                                   |
-| 时序预测       | `ts_fc`                            | [时序预测产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/time_series_forecasting.html#222-python脚本方式集成)                    |
-| 时序异常检测   | `ts_ad`                            | [时序异常检测产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/time_series_anomaly_detection.html#222-python脚本方式集成)          |
-| 时序分类       | `ts_cls`                           | [时序分类产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/time_series_classification.html#222-python脚本方式集成)                 |
+| 时序预测       | `ts_forecast`                            | [时序预测产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/time_series_forecasting.html#222-python脚本方式集成)                    |
+| 时序异常检测   | `ts_anomaly_detection`                            | [时序异常检测产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/time_series_anomaly_detection.html#222-python脚本方式集成)          |
+| 时序分类       | `ts_classification`                           | [时序分类产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/time_series_classification.html#222-python脚本方式集成)                 |
+| 多语种语音识别       | `multilingual_speech_recognition`                           | [多语种语音识别产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/multilingual_speech_recognition.html#212-python脚本方式集成)                 |
+| 通用视频分类       | `video_classification`                           | [通用视频分类产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/video_classification.html#22-python脚本方式集成)                 |
+| 通用视频检测       | `video_detection`                           | [通用视频检测产线Python脚本使用说明](https://paddlepaddle.github.io/PaddleX/latest/pipeline_usage/tutorials/time_series_pipelines/video_detection.html#212-python脚本方式集成)                 |
 
 </details>
 
